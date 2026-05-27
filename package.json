@@ -1,0 +1,15 @@
+{
+  "name": "garden-os",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@11.3.0",
+  "scripts": {
+    "dev": "pnpm --filter @garden/web dev",
+    "build": "pnpm --filter @garden/web build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm --filter @garden/web lint"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}
