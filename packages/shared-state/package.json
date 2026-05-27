@@ -1,0 +1,14 @@
+{
+  "name": "@garden/shared-state",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.tsx" },
+  "dependencies": {
+    "@garden/domain": "workspace:*",
+    "@garden/storage": "workspace:*",
+    "@garden/types": "workspace:*"
+  },
+  "peerDependencies": { "react": "^19.1.0" },
+  "scripts": { "typecheck": "tsc --noEmit -p tsconfig.json" },
+  "devDependencies": { "@types/react": "^19.1.2", "typescript": "^5.8.3" }
+}

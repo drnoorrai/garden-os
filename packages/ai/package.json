@@ -2,8 +2,14 @@
   "name": "@garden/ai",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/dailyBriefing.ts" },
-  "dependencies": { "@garden/types": "workspace:*" },
+  "exports": {
+    ".": "./src/index.ts",
+    "./dailyBriefing": "./src/dailyBriefing.ts"
+  },
+  "dependencies": {
+    "@garden/today-engine": "workspace:*",
+    "@garden/types": "workspace:*"
+  },
   "scripts": { "typecheck": "tsc --noEmit -p tsconfig.json" },
   "devDependencies": { "typescript": "^5.8.3" }
 }

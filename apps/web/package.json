@@ -10,7 +10,13 @@
   },
   "dependencies": {
     "@garden/ai": "workspace:*",
+    "@garden/design-system": "workspace:*",
     "@garden/domain": "workspace:*",
+    "@garden/module-eat": "workspace:*",
+    "@garden/module-think": "workspace:*",
+    "@garden/module-train": "workspace:*",
+    "@garden/module-work": "workspace:*",
+    "@garden/shared-state": "workspace:*",
     "@garden/storage": "workspace:*",
     "@garden/types": "workspace:*",
     "@garden/ui": "workspace:*",

@@ -1,27 +1,33 @@
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
-import { EatPage } from "./pages/EatPage";
 import { ReviewPage } from "./pages/ReviewPage";
 import { SettingsPage } from "./pages/SettingsPage";
-import { ThinkPage } from "./pages/ThinkPage";
 import { TodayPage } from "./pages/TodayPage";
-import { TrainPage } from "./pages/TrainPage";
 import { WeeklyReviewPage } from "./pages/WeeklyReviewPage";
-import { WorkPage } from "./pages/WorkPage";
+
+const TrainRoutes = lazy(() => import("@garden/module-train").then((module) => ({ default: module.TrainRoutes })));
+const ThinkRoutes = lazy(() => import("@garden/module-think").then((module) => ({ default: module.ThinkRoutes })));
+const WorkRoutes = lazy(() => import("@garden/module-work").then((module) => ({ default: module.WorkRoutes })));
+const EatRoutes = lazy(() => import("@garden/module-eat").then((module) => ({ default: module.EatRoutes })));
+
+const LoadingModule = () => <p className="py-14 text-sm text-muted">Opening module...</p>;
 
 export const App = () => (
   <AppShell>
-    <Routes>
-      <Route path="/" element={<Navigate replace to="/today" />} />
-      <Route path="/today" element={<TodayPage />} />
-      <Route path="/train" element={<TrainPage />} />
-      <Route path="/think/*" element={<ThinkPage />} />
-      <Route path="/work/*" element={<WorkPage />} />
-      <Route path="/eat" element={<EatPage />} />
-      <Route path="/review" element={<ReviewPage />} />
-      <Route path="/weekly-review" element={<WeeklyReviewPage />} />
-      <Route path="/settings" element={<SettingsPage />} />
-      <Route path="*" element={<Navigate replace to="/today" />} />
-    </Routes>
+    <Suspense fallback={<LoadingModule />}>
+      <Routes>
+        <Route path="/" element={<Navigate replace to="/today" />} />
+        <Route path="/today" element={<TodayPage />} />
+        <Route path="/train/*" element={<TrainRoutes />} />
+        <Route path="/think/*" element={<ThinkRoutes />} />
+        <Route path="/work/*" element={<WorkRoutes />} />
+        <Route path="/eat/*" element={<EatRoutes />} />
+        <Route path="/review" element={<ReviewPage />} />
+        <Route path="/weekly-review" element={<WeeklyReviewPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="*" element={<Navigate replace to="/today" />} />
+      </Routes>
+    </Suspense>
   </AppShell>
 );

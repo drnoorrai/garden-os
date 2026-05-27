@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+@source "../../../modules";
+@source "../../../packages";
+
 @theme {
   --color-canvas: #f6f5f1;
   --color-white: #ffffff;

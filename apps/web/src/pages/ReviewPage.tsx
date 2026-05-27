@@ -1,9 +1,8 @@
 import { createId, getPlan, todayKey } from "@garden/domain";
+import { deferTask, useGarden } from "@garden/shared-state";
 import { Button, Card, Label, Textarea } from "@garden/ui";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useGarden } from "../lib/garden-context";
-import { deferTask } from "../lib/updates";
 
 export const ReviewPage = () => {
   const { data, update } = useGarden();

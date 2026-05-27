@@ -1,12 +1,15 @@
-import { createDailyBriefing } from "@garden/ai";
+import { buildTodayIntelligence } from "@garden/ai";
 import { capacityForTier, createId, getPlan, orderedTasks, tierLabel, todayKey } from "@garden/domain";
+import { getTodaySummary as getEatSummary } from "@garden/module-eat/summary";
+import { getTodaySummary as getThinkSummary } from "@garden/module-think/summary";
+import { getTodaySummary as getTrainSummary } from "@garden/module-train/summary";
+import { getTodaySummary as getWorkSummary } from "@garden/module-work/summary";
+import { changePlan, deferTask, useGarden } from "@garden/shared-state";
 import type { DailyTask, TaskTier } from "@garden/types";
 import { Button, Card, cn, Input, Pill, SectionHeading } from "@garden/ui";
 import { ArrowRight, CalendarDays, Check, GripVertical, Plus, RotateCcw } from "lucide-react";
 import { type DragEvent, type ReactNode, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { useGarden } from "../lib/garden-context";
-import { changePlan, deferTask } from "../lib/updates";
 
 const formatDate = (date: string) =>
   new Date(`${date}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
@@ -19,13 +22,14 @@ const greeting = () => {
 };
 
 export const TodayPage = () => {
-  const { data, update } = useGarden();
+  const { data, userContext, update } = useGarden();
   const date = todayKey();
   const plan = getPlan(data, date);
-  const workout = data.training.find((entry) => entry.date === date);
-  const latestNote = data.fieldNotes[0];
-  const activeBet = data.bets.find((bet) => bet.status === "active");
-  const briefing = createDailyBriefing({ plan, workout });
+  const train = getTrainSummary(data);
+  const think = getThinkSummary(data);
+  const work = getWorkSummary(data);
+  const eat = getEatSummary(data);
+  const briefing = buildTodayIntelligence({ context: userContext, summaries: [train, think, work, eat] });
   const [addingTier, setAddingTier] = useState<TaskTier | null>(null);
   const [draft, setDraft] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
@@ -33,8 +37,8 @@ export const TodayPage = () => {
   const completedCount = plan.tasks.filter((task) => task.status === "completed").length;
 
   const attentionCount = useMemo(
-    () => data.kanbanCards.filter((item) => item.column === "blocked" || item.column === "today").length,
-    [data.kanbanCards],
+    () => work.blockers,
+    [work.blockers],
   );
 
   const addTask = (tier: TaskTier) => {
@@ -224,24 +228,24 @@ export const TodayPage = () => {
           </Card>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
             <SupportCard title="Train" href="/train">
-              <p className="font-medium">{workout?.workout}</p>
-              <p className="mt-2 text-sm text-muted">{workout?.durationMinutes} min · {workout?.movementType} · {workout?.intensity}</p>
-              <p className="mt-3 text-sm leading-6 text-muted">{workout?.recoveryNote}</p>
+              <p className="font-medium">{train.workout}</p>
+              <p className="mt-2 text-sm text-muted">{train.weeklyHardSets} hard sets · {train.intensity} intensity</p>
+              <p className="mt-3 text-sm leading-6 text-muted">{train.recovery}</p>
             </SupportCard>
             <SupportCard title="Think" href="/think">
-              <p className="text-sm leading-6 text-muted">{plan.reflectionPrompt}</p>
-              <p className="mt-3 text-sm font-medium">{latestNote?.title}</p>
+              <p className="text-sm leading-6 text-muted">{think.prompt}</p>
+              <p className="mt-3 text-sm font-medium">{think.insight}</p>
             </SupportCard>
             <SupportCard title="Work" href="/work">
-              <p className="font-medium">{data.projects[0]?.name}</p>
-              <p className="mt-2 text-sm text-muted">{activeBet?.title}</p>
+              <p className="font-medium">{work.priority}</p>
+              <p className="mt-2 text-sm text-muted">{work.activeBets} strategic bets · {work.sprintLoad} sprint</p>
               <Pill tone="clay">{attentionCount} need attention</Pill>
             </SupportCard>
             <SupportCard title="Eat" href="/eat">
-              <p className="font-medium">{data.profile.proteinTarget}g protein target</p>
+              <p className="font-medium">{eat.proteinLogged} / {eat.proteinTarget}g protein</p>
               <p className="mt-2 text-sm leading-6 text-muted">{plan.mealSuggestion}</p>
-              <Pill tone={plan.hydrationComplete ? "sage" : "stone"}>
-                {plan.hydrationComplete ? "Hydrated" : "Hydration pending"}
+              <Pill tone={eat.hydrationComplete ? "sage" : "stone"}>
+                {eat.hydrationComplete ? "Hydrated" : "Hydration pending"}
               </Pill>
             </SupportCard>
           </div>

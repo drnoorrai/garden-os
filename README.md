@@ -1,32 +1,19 @@
 # Garden OS
 
-Garden OS is a calm, local-first personal operating system for intentional living. V1 centers on one useful question each morning: **what matters today?**
+Garden OS is a calm, local-first operating system for intentional living.
 
-The product is deliberately smaller than a productivity suite. `Today` is the home screen and the other areas exist to inform it: movement in `Train`, thinking in `Think`, commitments in `Work`, nourishment in `Eat`, and an evening reflection loop.
+V2 turns the product into a modular orchestration layer: `Today` remains the daily control centre, while `Train`, `Think`, `Work` and `Eat` are independently owned domain modules that feed context back into Today intelligence.
 
-## V1 Experience
+The product goal is simple: opening the app should make life feel organized.
 
-- A Today dashboard built around the 1-3-5 rule and Ivy Lee execution order.
-- Editable, reorderable and completable daily priorities, with one-click deferral to tomorrow.
-- A deterministic daily briefing and realistic available-focus-hours prompt.
-- Lightweight Train, Think, Work and Eat cards on Today, with focused supporting routes.
-- GTD inbox capture, impact/effort strategic bets, simple Kanban and MoSCoW scope boundaries.
-- Clarity coaching sessions and Field Notes.
-- Evening review persistence and derived weekly review.
-- Realistic first-use data, stored locally in the browser.
+## V2 Experience
 
-## Routes
-
-| Route | Purpose |
-| --- | --- |
-| `/today` | Daily control centre and default landing page |
-| `/train` | Today's movement and light history |
-| `/think`, `/think/clarity`, `/think/field-notes` | Reflection sessions and notes |
-| `/work`, `/work/inbox`, `/work/bets`, `/work/kanban` | Execution and strategic scope |
-| `/eat` | Protein target, meal idea, hydration and meal log |
-| `/review` | Evening review |
-| `/weekly-review` | Weekly reflection summary |
-| `/settings` | Local profile preferences and demo reset |
+- `Today` aggregates live signals from every module through deterministic Today intelligence.
+- `Train` brings the core Tension experience into Garden OS: workout templates, session flow, movement system, hard-set volume, phase-aware targets and history.
+- `Think` combines Clarity, Field Notes, Journal, Decisions and Mental Models into one private thinking system.
+- `Work` unifies GTD capture, Rai Bets prioritization, Task Garden execution, MoSCoW project scope and weekly sprint focus.
+- `Eat` stays intentionally lightweight: protein, hydration, meal planning, groceries and energy awareness.
+- Existing V1 local data is preserved by a migration layer and expanded with V2 defaults.
 
 ## Architecture
 
@@ -34,26 +21,61 @@ This is a pnpm workspace using React, TypeScript, Vite and Tailwind CSS.
 
 ```text
 apps/
-  web/          React app shell, routes and feature views
+  web/              React app shell, shared layout and lazy module routes
 packages/
-  ai/           Deterministic daily briefing logic
-  domain/       Seed data and daily planning rules
-  storage/      Local storage adapter and Supabase placeholder
-  types/        Shared product contracts
-  ui/           Small shadcn-style primitive component set
-docs/design/    Today-screen visual reference
+  ai/               Public deterministic intelligence API
+  design-system/    Shared module headers, tabs and stats
+  domain/           Seed data and daily planning rules
+  shared-state/     GardenProvider, UserContext and V1-to-V2 migration
+  storage/          Local storage adapter and Supabase placeholder
+  today-engine/     Cross-module Today intelligence
+  types/            Shared product contracts
+  ui/               Small shadcn-style primitive component set
+modules/
+  train/            Tension-inspired training domain
+  think/            Clarity, notes, journal, decisions and mental models
+  work/             Inbox, bets, execution, projects and sprint
+  eat/              Meals, groceries, hydration and protein
 ```
 
-Data stays local by default through `localStorageAdapter`. `supabaseAdapter` is intentionally a typed placeholder for a future synchronization layer; no account or backend is required for V1.
+Each module owns its route surface, components, state updates and domain logic. Shared packages contain only cross-cutting contracts and infrastructure.
 
-## Frameworks Encoded
+## Module Contract
 
-- **1-3-5 Rule:** one big task, three medium tasks and five small tasks on Today.
-- **Ivy Lee:** order carries meaning; the first incomplete priority is next.
-- **GTD:** Work Inbox captures and triages loose commitments.
-- **Action Priority Matrix:** bets are classified from impact and effort.
-- **Kanban:** a compact board for execution flow.
-- **MoSCoW:** visible project scope decisions prevent V1 overbuilding.
+Every module exports `getTodaySummary(data)` from its `summary` entrypoint:
+
+```ts
+import { getTodaySummary as getTrainSummary } from "@garden/module-train/summary";
+```
+
+`Today` consumes these summaries, combines them with `UserContext`, and calls `buildTodayIntelligence()` from `@garden/ai`.
+
+The current AI layer is deterministic by design. It produces summaries, recommendations, warnings, suggested focus, recovery guidance and tomorrow-planning prompts without a live model dependency.
+
+## Routes
+
+| Route | Purpose |
+| --- | --- |
+| `/today` | Daily control centre and default landing page |
+| `/train`, `/train/session`, `/train/history`, `/train/settings` | Training week, workout flow, history and structure |
+| `/think` | Thinking system overview |
+| `/think/clarity` | Guided clarity sessions |
+| `/think/field-notes` | Knowledge capture and search |
+| `/think/journal` | Daily reflection |
+| `/think/decisions` | Decision log |
+| `/think/models` | Mental models |
+| `/work` | Work overview |
+| `/work/inbox` | GTD capture and triage |
+| `/work/prioritize` | Rai Bets-style prioritization |
+| `/work/execute` | Task Garden-style Kanban execution |
+| `/work/projects` | MoSCoW project scope |
+| `/work/sprint` | Weekly focus and capacity |
+| `/eat`, `/eat/plan`, `/eat/groceries` | Nutrition support |
+| `/review` | Evening review |
+| `/weekly-review` | Weekly reflection summary |
+| `/settings` | Local profile preferences and demo reset |
+
+Legacy V1 work routes `/work/bets` and `/work/kanban` redirect to `/work/prioritize` and `/work/execute`.
 
 ## Development
 
@@ -74,15 +96,17 @@ pnpm lint
 pnpm build
 ```
 
+## Storage
+
+Garden OS is local-first. The browser storage key remains `garden-os:v1` so existing V1 data can be migrated in place.
+
+`@garden/storage` includes a typed `supabaseAdapter` placeholder for future sync, but V2 does not require accounts, a backend or environment variables.
+
 ## Configuration
 
-Copy `.env.example` only when exploring future synchronization. The local-first application does not require environment variables.
+Copy `.env.example` only when exploring future synchronization.
 
 ```env
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
 ```
-
-## Product Boundary
-
-The V1 modules are orchestration views, not replacements for Noor Rai's deeper training, task, bets, clarity or Field Notes projects. Integration can follow once the daily operating loop proves useful.
