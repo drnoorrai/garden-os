@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@garden/ai": "workspace:*",
+    "@garden/auth": "workspace:*",
     "@garden/design-system": "workspace:*",
     "@garden/domain": "workspace:*",
     "@garden/module-eat": "workspace:*",

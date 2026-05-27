@@ -1,5 +1,6 @@
+import { useAuth } from "@garden/auth";
 import { Button, cn } from "@garden/ui";
-import { BookOpen, Dumbbell, House, Leaf, Settings, SquareCheckBig, UtensilsCrossed } from "lucide-react";
+import { BookOpen, Dumbbell, House, Leaf, LogOut, Settings, SquareCheckBig, UtensilsCrossed } from "lucide-react";
 import type { PropsWithChildren } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 
@@ -13,6 +14,8 @@ const primary = [
 
 export const AppShell = ({ children }: PropsWithChildren) => {
   const navigate = useNavigate();
+  const auth = useAuth();
+  const accountLabel = auth.user?.email ?? (auth.enabled ? "Signed in" : "Local mode");
 
   return (
     <div className="min-h-screen bg-canvas text-ink">
@@ -44,9 +47,19 @@ export const AppShell = ({ children }: PropsWithChildren) => {
           ))}
         </nav>
         <div className="mt-auto space-y-3">
+          <div className="rounded-2xl bg-white/70 p-3 text-xs text-muted">
+            <p className="font-medium text-ink">{accountLabel}</p>
+            <p className="mt-1">{auth.enabled ? "Supabase session active" : "Auth not configured"}</p>
+          </div>
           <Button onClick={() => navigate("/review")} className="w-full !bg-clay hover:!bg-clay/90">
             Evening review
           </Button>
+          {auth.enabled ? (
+            <Button variant="quiet" className="w-full justify-start gap-2 px-4" onClick={() => void auth.signOut()}>
+              <LogOut size={16} />
+              Sign out
+            </Button>
+          ) : null}
           <NavLink to="/settings" className="flex items-center gap-3 px-4 py-3 text-sm text-muted hover:text-ink">
             <Settings size={17} />
             Settings

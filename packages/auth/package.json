@@ -1,0 +1,21 @@
+{
+  "name": "@garden/auth",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@garden/ui": "workspace:*",
+    "@supabase/supabase-js": "^2.106.2",
+    "react": "^19.1.0",
+    "react-router-dom": "^7.6.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.15",
+    "typescript": "^5.8.3"
+  }
+}
