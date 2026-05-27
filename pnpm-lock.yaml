@@ -17,9 +17,27 @@ importers:
       '@garden/ai':
         specifier: workspace:*
         version: link:../../packages/ai
+      '@garden/design-system':
+        specifier: workspace:*
+        version: link:../../packages/design-system
       '@garden/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@garden/module-eat':
+        specifier: workspace:*
+        version: link:../../modules/eat
+      '@garden/module-think':
+        specifier: workspace:*
+        version: link:../../modules/think
+      '@garden/module-train':
+        specifier: workspace:*
+        version: link:../../modules/train
+      '@garden/module-work':
+        specifier: workspace:*
+        version: link:../../modules/work
+      '@garden/shared-state':
+        specifier: workspace:*
+        version: link:../../packages/shared-state
       '@garden/storage':
         specifier: workspace:*
         version: link:../../packages/storage
@@ -82,12 +100,173 @@ importers:
         specifier: ^6.3.5
         version: 6.4.2(jiti@2.7.0)(lightningcss@1.32.0)
 
+  modules/eat:
+    dependencies:
+      '@garden/design-system':
+        specifier: workspace:*
+        version: link:../../packages/design-system
+      '@garden/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
+      '@garden/shared-state':
+        specifier: workspace:*
+        version: link:../../packages/shared-state
+      '@garden/types':
+        specifier: workspace:*
+        version: link:../../packages/types
+      '@garden/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      lucide-react:
+        specifier: ^0.511.0
+        version: 0.511.0(react@19.2.6)
+      react:
+        specifier: ^19.1.0
+        version: 19.2.6
+      react-router-dom:
+        specifier: ^7.6.1
+        version: 7.15.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.1.2
+        version: 19.2.15
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  modules/think:
+    dependencies:
+      '@garden/design-system':
+        specifier: workspace:*
+        version: link:../../packages/design-system
+      '@garden/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
+      '@garden/shared-state':
+        specifier: workspace:*
+        version: link:../../packages/shared-state
+      '@garden/types':
+        specifier: workspace:*
+        version: link:../../packages/types
+      '@garden/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      lucide-react:
+        specifier: ^0.511.0
+        version: 0.511.0(react@19.2.6)
+      react:
+        specifier: ^19.1.0
+        version: 19.2.6
+      react-router-dom:
+        specifier: ^7.6.1
+        version: 7.15.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.1.2
+        version: 19.2.15
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  modules/train:
+    dependencies:
+      '@garden/design-system':
+        specifier: workspace:*
+        version: link:../../packages/design-system
+      '@garden/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
+      '@garden/shared-state':
+        specifier: workspace:*
+        version: link:../../packages/shared-state
+      '@garden/types':
+        specifier: workspace:*
+        version: link:../../packages/types
+      '@garden/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      lucide-react:
+        specifier: ^0.511.0
+        version: 0.511.0(react@19.2.6)
+      react:
+        specifier: ^19.1.0
+        version: 19.2.6
+      react-router-dom:
+        specifier: ^7.6.1
+        version: 7.15.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.1.2
+        version: 19.2.15
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  modules/work:
+    dependencies:
+      '@garden/design-system':
+        specifier: workspace:*
+        version: link:../../packages/design-system
+      '@garden/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
+      '@garden/shared-state':
+        specifier: workspace:*
+        version: link:../../packages/shared-state
+      '@garden/types':
+        specifier: workspace:*
+        version: link:../../packages/types
+      '@garden/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      lucide-react:
+        specifier: ^0.511.0
+        version: 0.511.0(react@19.2.6)
+      react:
+        specifier: ^19.1.0
+        version: 19.2.6
+      react-router-dom:
+        specifier: ^7.6.1
+        version: 7.15.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.1.2
+        version: 19.2.15
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
   packages/ai:
     dependencies:
+      '@garden/today-engine':
+        specifier: workspace:*
+        version: link:../today-engine
       '@garden/types':
         specifier: workspace:*
         version: link:../types
     devDependencies:
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/design-system:
+    dependencies:
+      '@garden/ui':
+        specifier: workspace:*
+        version: link:../ui
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      react:
+        specifier: ^19.1.0
+        version: 19.2.6
+      react-router-dom:
+        specifier: ^7.6.1
+        version: 7.15.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.1.2
+        version: 19.2.15
       typescript:
         specifier: ^5.8.3
         version: 5.9.3
@@ -102,7 +281,39 @@ importers:
         specifier: ^5.8.3
         version: 5.9.3
 
+  packages/shared-state:
+    dependencies:
+      '@garden/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@garden/storage':
+        specifier: workspace:*
+        version: link:../storage
+      '@garden/types':
+        specifier: workspace:*
+        version: link:../types
+      react:
+        specifier: ^19.1.0
+        version: 19.2.6
+    devDependencies:
+      '@types/react':
+        specifier: ^19.1.2
+        version: 19.2.15
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
   packages/storage:
+    devDependencies:
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/today-engine:
+    dependencies:
+      '@garden/types':
+        specifier: workspace:*
+        version: link:../types
     devDependencies:
       typescript:
         specifier: ^5.8.3

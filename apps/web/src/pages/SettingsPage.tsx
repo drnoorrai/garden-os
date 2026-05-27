@@ -1,6 +1,6 @@
 import { Button, Card, Input, Label, SectionHeading } from "@garden/ui";
+import { useGarden } from "@garden/shared-state";
 import { useState } from "react";
-import { useGarden } from "../lib/garden-context";
 
 export const SettingsPage = () => {
   const { data, update, reset } = useGarden();

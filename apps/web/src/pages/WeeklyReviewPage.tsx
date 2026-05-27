@@ -1,6 +1,6 @@
 import { Card, Pill, SectionHeading } from "@garden/ui";
+import { useGarden } from "@garden/shared-state";
 import { Link } from "react-router-dom";
-import { useGarden } from "../lib/garden-context";
 
 export const WeeklyReviewPage = () => {
   const { data } = useGarden();
