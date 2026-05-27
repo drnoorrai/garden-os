@@ -1,0 +1,9 @@
+{
+  "name": "@garden/ai",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/dailyBriefing.ts" },
+  "dependencies": { "@garden/types": "workspace:*" },
+  "scripts": { "typecheck": "tsc --noEmit -p tsconfig.json" },
+  "devDependencies": { "typescript": "^5.8.3" }
+}
