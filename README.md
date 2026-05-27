@@ -23,6 +23,7 @@ This is a pnpm workspace using React, TypeScript, Vite and Tailwind CSS.
 apps/
   web/              React app shell, shared layout and lazy module routes
 packages/
+  auth/             Supabase Auth provider, login screen and route guard
   ai/               Public deterministic intelligence API
   design-system/    Shared module headers, tabs and stats
   domain/           Seed data and daily planning rules
@@ -102,9 +103,22 @@ Garden OS is local-first. The browser storage key remains `garden-os:v1` so exis
 
 `@garden/storage` includes a typed `supabaseAdapter` placeholder for future sync, but V2 does not require accounts, a backend or environment variables.
 
+## Authentication
+
+Garden OS supports Supabase Auth for email magic-link login and Google OAuth.
+
+When `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are present, the app requires a signed-in user and exposes `/login`. When those values are empty, Garden OS runs in local demo mode so development and review still work without a backend.
+
+In Supabase, configure:
+
+- Email provider enabled for magic links.
+- Google provider enabled with a Google OAuth Client ID and Client Secret.
+- Site URL: `https://garden-os.pages.dev`
+- Redirect URLs: `https://garden-os.pages.dev/**` and `http://localhost:5173/**`
+
 ## Configuration
 
-Copy `.env.example` only when exploring future synchronization.
+Copy `.env.example` to configure hosted authentication.
 
 ```env
 VITE_SUPABASE_URL=

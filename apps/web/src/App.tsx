@@ -1,3 +1,4 @@
+import { LoginPage, RequireAuth } from "@garden/auth";
 import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
@@ -14,20 +15,30 @@ const EatRoutes = lazy(() => import("@garden/module-eat").then((module) => ({ de
 const LoadingModule = () => <p className="py-14 text-sm text-muted">Opening module...</p>;
 
 export const App = () => (
-  <AppShell>
-    <Suspense fallback={<LoadingModule />}>
-      <Routes>
-        <Route path="/" element={<Navigate replace to="/today" />} />
-        <Route path="/today" element={<TodayPage />} />
-        <Route path="/train/*" element={<TrainRoutes />} />
-        <Route path="/think/*" element={<ThinkRoutes />} />
-        <Route path="/work/*" element={<WorkRoutes />} />
-        <Route path="/eat/*" element={<EatRoutes />} />
-        <Route path="/review" element={<ReviewPage />} />
-        <Route path="/weekly-review" element={<WeeklyReviewPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="*" element={<Navigate replace to="/today" />} />
-      </Routes>
-    </Suspense>
-  </AppShell>
+  <Routes>
+    <Route path="/login" element={<LoginPage />} />
+    <Route
+      path="*"
+      element={
+        <RequireAuth>
+          <AppShell>
+            <Suspense fallback={<LoadingModule />}>
+              <Routes>
+                <Route path="/" element={<Navigate replace to="/today" />} />
+                <Route path="/today" element={<TodayPage />} />
+                <Route path="/train/*" element={<TrainRoutes />} />
+                <Route path="/think/*" element={<ThinkRoutes />} />
+                <Route path="/work/*" element={<WorkRoutes />} />
+                <Route path="/eat/*" element={<EatRoutes />} />
+                <Route path="/review" element={<ReviewPage />} />
+                <Route path="/weekly-review" element={<WeeklyReviewPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="*" element={<Navigate replace to="/today" />} />
+              </Routes>
+            </Suspense>
+          </AppShell>
+        </RequireAuth>
+      }
+    />
+  </Routes>
 );
