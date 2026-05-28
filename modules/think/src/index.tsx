@@ -4,11 +4,22 @@ import { useGarden } from "@garden/shared-state";
 import type { NoteCategory } from "@garden/types";
 import { Button, Card, cn, Input, Pill, SectionHeading, Textarea } from "@garden/ui";
 import { ArrowRight, BookText, Compass, Plus, Scale, Sparkles } from "lucide-react";
-import { type ReactNode, useMemo, useState } from "react";
-import { Route, Routes } from "react-router-dom";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { Route, Routes, useSearchParams } from "react-router-dom";
 import { clarityStages, getTodaySummary } from "./lib";
+import { LinkedText, LinkTextarea, linkTargets, ReferencedBy } from "./linking";
 
 export { getTodaySummary } from "./lib";
+
+/** When navigated to with ?ref=<id>, scroll the matching card into view and highlight it. */
+const useFocusHighlight = () => {
+  const [params] = useSearchParams();
+  const focusId = params.get("ref");
+  useEffect(() => {
+    if (focusId) document.getElementById(`think-${focusId}`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [focusId]);
+  return focusId;
+};
 
 const tabs = [
   { to: "/think", label: "Overview", end: true },
@@ -127,6 +138,8 @@ const Insight = ({ label, text }: { label: string; text: string }) => (
 
 const FieldNotes = () => {
   const { data, update } = useGarden();
+  const focusId = useFocusHighlight();
+  const targets = useMemo(() => linkTargets(data), [data]);
   const [search, setSearch] = useState("");
   const [draft, setDraft] = useState({ title: "", body: "", tags: "", category: "Saved Insights" as NoteCategory });
   const notes = data.fieldNotes.filter((note) => `${note.title} ${note.body} ${note.tags.join(" ")}`.toLowerCase().includes(search.toLowerCase()));
@@ -141,7 +154,7 @@ const FieldNotes = () => {
           setDraft({ title: "", body: "", tags: "", category: "Saved Insights" });
         }}>
           <Input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} placeholder="Title" />
-          <Textarea rows={6} value={draft.body} onChange={(event) => setDraft({ ...draft, body: event.target.value })} placeholder="Paste a highlight or write an observation..." />
+          <LinkTextarea rows={6} value={draft.body} onChange={(body) => setDraft({ ...draft, body })} targets={targets} placeholder="Write an observation. Use [[ to link another note..." />
           <Input value={draft.tags} onChange={(event) => setDraft({ ...draft, tags: event.target.value })} placeholder="Tags, comma separated" />
           <select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value as NoteCategory })} className="h-11 w-full rounded-xl border border-ink/8 bg-white px-3 text-sm">
             {(["Research", "Essays", "Mental Models", "Saved Insights"] as NoteCategory[]).map((category) => <option key={category}>{category}</option>)}
@@ -152,7 +165,15 @@ const FieldNotes = () => {
       <div>
         <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search notes, tags or ideas..." className="mb-4" />
         <div className="space-y-4">
-          {notes.map((note) => <Card key={note.id} className="p-6"><div className="flex justify-between"><Pill tone="stone">{note.category}</Pill><span className="text-xs text-muted">{note.createdAt}</span></div><h2 className="mt-4 font-serif text-2xl tracking-tight">{note.title}</h2><p className="mt-3 text-sm leading-7 text-muted">{note.body}</p><div className="mt-4 flex gap-2">{note.tags.map((tag) => <Pill key={tag}>{tag}</Pill>)}</div></Card>)}
+          {notes.map((note) => (
+            <Card key={note.id} id={`think-${note.id}`} className={cn("p-6 transition", focusId === note.id && "ring-2 ring-sage")}>
+              <div className="flex justify-between"><Pill tone="stone">{note.category}</Pill><span className="text-xs text-muted">{note.createdAt}</span></div>
+              <h2 className="mt-4 font-serif text-2xl tracking-tight">{note.title}</h2>
+              <p className="mt-3 text-sm leading-7 text-muted"><LinkedText text={note.body} targets={targets} /></p>
+              <div className="mt-4 flex gap-2">{note.tags.map((tag) => <Pill key={tag}>{tag}</Pill>)}</div>
+              <ReferencedBy title={note.title} data={data} />
+            </Card>
+          ))}
         </div>
       </div>
     </div>
@@ -161,23 +182,26 @@ const FieldNotes = () => {
 
 const Journal = () => {
   const { data, update } = useGarden();
+  const targets = useMemo(() => linkTargets(data), [data]);
   const [entry, setEntry] = useState("");
   const [mood, setMood] = useState(3);
   return (
     <div className="grid gap-6 lg:grid-cols-[.85fr_1fr]">
       <Card className="p-6">
         <SectionHeading title="Journal today" supporting="A private reflection, kept close to decisions." />
-        <Textarea rows={9} value={entry} onChange={(event) => setEntry(event.target.value)} placeholder="What is true today?" />
+        <LinkTextarea rows={9} value={entry} onChange={setEntry} targets={targets} placeholder="What is true today? Use [[ to link a note or decision..." />
         <div className="my-4 flex items-center gap-3 text-sm text-muted">Mood {[1, 2, 3, 4, 5].map((score) => <button key={score} className={cn("size-9 rounded-full", mood === score ? "bg-forest text-white" : "bg-mist")} onClick={() => setMood(score)}>{score}</button>)}</div>
         <Button onClick={() => { if (!entry.trim()) return; update((current) => ({ ...current, journal: [{ id: createId(), date: todayKey(), title: "Daily reflection", body: entry.trim(), mood }, ...current.journal] })); setEntry(""); }}>Save entry</Button>
       </Card>
-      <div className="space-y-3">{data.journal.map((item) => <Card key={item.id} className="p-5"><p className="text-xs text-muted">{item.date} · Mood {item.mood ?? "-"}</p><p className="mt-3 text-sm leading-7">{item.body}</p></Card>)}</div>
+      <div className="space-y-3">{data.journal.map((item) => <Card key={item.id} className="p-5"><p className="text-xs text-muted">{item.date} · Mood {item.mood ?? "-"}</p><p className="mt-3 text-sm leading-7"><LinkedText text={item.body} targets={targets} /></p></Card>)}</div>
     </div>
   );
 };
 
 const Decisions = () => {
   const { data, update } = useGarden();
+  const focusId = useFocusHighlight();
+  const targets = useMemo(() => linkTargets(data), [data]);
   const [decision, setDecision] = useState("");
   const [rationale, setRationale] = useState("");
   return (
@@ -186,23 +210,39 @@ const Decisions = () => {
         <SectionHeading title="Decision log" supporting="Record a choice and why it deserved making." />
         <form className="space-y-3" onSubmit={(event) => { event.preventDefault(); if (!decision.trim()) return; update((current) => ({ ...current, decisions: [{ id: createId(), date: todayKey(), decision: decision.trim(), rationale: rationale.trim(), status: "open" }, ...current.decisions] })); setDecision(""); setRationale(""); }}>
           <Input value={decision} onChange={(event) => setDecision(event.target.value)} placeholder="Decision to make" />
-          <Textarea value={rationale} onChange={(event) => setRationale(event.target.value)} placeholder="Context and rationale" rows={4} />
+          <LinkTextarea value={rationale} onChange={setRationale} targets={targets} placeholder="Context and rationale. Use [[ to link a model or note..." rows={4} />
           <Button type="submit">Log decision</Button>
         </form>
       </Card>
-      <div className="space-y-3">{data.decisions.map((item) => <Card key={item.id} className="p-5"><div className="flex justify-between gap-3"><p className="font-medium">{item.decision}</p><Pill tone={item.status === "decided" ? "sage" : "clay"}>{item.status}</Pill></div><p className="mt-3 text-sm text-muted">{item.rationale}</p>{item.status !== "decided" ? <Button variant="secondary" className="mt-4" onClick={() => update((current) => ({ ...current, decisions: current.decisions.map((decision) => decision.id === item.id ? { ...decision, status: "decided" } : decision) }))}>Mark decided</Button> : null}</Card>)}</div>
+      <div className="space-y-3">{data.decisions.map((item) => (
+        <Card key={item.id} id={`think-${item.id}`} className={cn("p-5 transition", focusId === item.id && "ring-2 ring-sage")}>
+          <div className="flex justify-between gap-3"><p className="font-medium">{item.decision}</p><Pill tone={item.status === "decided" ? "sage" : "clay"}>{item.status}</Pill></div>
+          <p className="mt-3 text-sm text-muted"><LinkedText text={item.rationale} targets={targets} /></p>
+          {item.status !== "decided" ? <Button variant="secondary" className="mt-4" onClick={() => update((current) => ({ ...current, decisions: current.decisions.map((decision) => decision.id === item.id ? { ...decision, status: "decided" } : decision) }))}>Mark decided</Button> : null}
+          <ReferencedBy title={item.decision} data={data} />
+        </Card>
+      ))}</div>
     </div>
   );
 };
 
 const Models = () => {
   const { data, update } = useGarden();
+  const focusId = useFocusHighlight();
+  const targets = useMemo(() => linkTargets(data), [data]);
   const [title, setTitle] = useState("");
   const [principle, setPrinciple] = useState("");
   return (
     <div className="grid gap-6 md:grid-cols-2">
-      <Card className="p-6"><SectionHeading title="Save a framework" /><Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Model name" /><Textarea className="mt-3" rows={4} value={principle} onChange={(event) => setPrinciple(event.target.value)} placeholder="Core principle" /><Button className="mt-4" onClick={() => { if (!title.trim()) return; update((current) => ({ ...current, mentalModels: [{ id: createId(), title: title.trim(), principle: principle.trim(), application: "Apply deliberately this week." }, ...current.mentalModels] })); setTitle(""); setPrinciple(""); }}><Sparkles size={15} /> Save</Button></Card>
-      <div className="space-y-3">{data.mentalModels.map((model) => <Card key={model.id} className="p-6"><h2 className="font-serif text-2xl tracking-tight">{model.title}</h2><p className="mt-3 text-sm leading-7">{model.principle}</p><p className="mt-3 text-sm text-muted">{model.application}</p></Card>)}</div>
+      <Card className="p-6"><SectionHeading title="Save a framework" /><Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Model name" /><div className="mt-3"><LinkTextarea rows={4} value={principle} onChange={setPrinciple} targets={targets} placeholder="Core principle. Use [[ to link a note or decision..." /></div><Button className="mt-4" onClick={() => { if (!title.trim()) return; update((current) => ({ ...current, mentalModels: [{ id: createId(), title: title.trim(), principle: principle.trim(), application: "Apply deliberately this week." }, ...current.mentalModels] })); setTitle(""); setPrinciple(""); }}><Sparkles size={15} /> Save</Button></Card>
+      <div className="space-y-3">{data.mentalModels.map((model) => (
+        <Card key={model.id} id={`think-${model.id}`} className={cn("p-6 transition", focusId === model.id && "ring-2 ring-sage")}>
+          <h2 className="font-serif text-2xl tracking-tight">{model.title}</h2>
+          <p className="mt-3 text-sm leading-7"><LinkedText text={model.principle} targets={targets} /></p>
+          <p className="mt-3 text-sm text-muted">{model.application}</p>
+          <ReferencedBy title={model.title} data={data} />
+        </Card>
+      ))}</div>
     </div>
   );
 };

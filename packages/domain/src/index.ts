@@ -188,7 +188,7 @@ export const createSeedData = (date = todayKey()): GardenData => ({
       id: createId(),
       createdAt: date,
       title: "Subtraction is a form of care",
-      body: "An operating system should remove decisions before it adds tracking.",
+      body: "An operating system should remove decisions before it adds tracking. This builds on [[Subtraction is care]] and the call to [[Keep V1 local-first]].",
       tags: ["product", "focus"],
       category: "Mental Models",
     },

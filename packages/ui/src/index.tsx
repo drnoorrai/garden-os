@@ -66,15 +66,19 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
 );
 Input.displayName = "Input";
 
-export const Textarea = ({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) => (
-  <textarea
-    className={cn(
-      "w-full rounded-xl border border-ink/8 bg-white px-3.5 py-3 text-sm leading-6 text-ink outline-none placeholder:text-muted/70 focus:border-sage focus:ring-2 focus:ring-sage/15",
-      className,
-    )}
-    {...props}
-  />
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(
+  ({ className, ...props }, ref) => (
+    <textarea
+      ref={ref}
+      className={cn(
+        "w-full rounded-xl border border-ink/8 bg-white px-3.5 py-3 text-sm leading-6 text-ink outline-none placeholder:text-muted/70 focus:border-sage focus:ring-2 focus:ring-sage/15",
+        className,
+      )}
+      {...props}
+    />
+  ),
 );
+Textarea.displayName = "Textarea";
 
 export const Label = ({ children, className, ...props }: PropsWithChildren<LabelHTMLAttributes<HTMLLabelElement>>) => (
   <label className={cn("mb-1.5 block text-xs font-medium uppercase tracking-[0.14em] text-muted", className)} {...props}>
