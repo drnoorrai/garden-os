@@ -16,6 +16,7 @@ export interface UserProfile {
   name: string;
   focusTheme: string;
   proteinTarget: number;
+  onboardingComplete?: boolean;
 }
 
 export interface DailyTask {

@@ -1,10 +1,9 @@
-import { createSeedData, getPlan, nextDayKey, todayKey } from "@garden/domain";
+import { createFreshData, createSeedData, getPlan, nextDayKey, todayKey } from "@garden/domain";
 import { localStorageAdapter } from "@garden/storage";
 import type { DailyPlan, GardenData, UserContext } from "@garden/types";
 import { createContext, type PropsWithChildren, useContext, useEffect, useMemo, useState } from "react";
 
-const STORAGE_KEY = "garden-os:v1";
-const adapter = localStorageAdapter<Partial<GardenData>>(STORAGE_KEY);
+const DEFAULT_STORAGE_KEY = "garden-os:v1:fresh";
 
 export interface GardenContextValue {
   data: GardenData;
@@ -16,8 +15,13 @@ export interface GardenContextValue {
 
 const GardenContext = createContext<GardenContextValue | null>(null);
 
+export type GardenSeedMode = "fresh" | "demo";
+
+const createInitialData = (mode: GardenSeedMode, date = todayKey()) =>
+  mode === "demo" ? createSeedData(date) : createFreshData(date);
+
 export const migrateGardenData = (stored: Partial<GardenData> | null, date = todayKey()): GardenData => {
-  const seed = createSeedData(date);
+  const seed = createFreshData(date);
   if (!stored) return seed;
   return {
     ...seed,
@@ -69,16 +73,33 @@ export const deferTask = (data: GardenData, date: string, taskId: string): Garde
   );
 };
 
-export const GardenProvider = ({ children }: PropsWithChildren) => {
-  const [data, setData] = useState<GardenData>(() => createSeedData(todayKey()));
+export const GardenProvider = ({
+  children,
+  seedMode = "fresh",
+  storageKey = DEFAULT_STORAGE_KEY,
+}: PropsWithChildren<{ seedMode?: GardenSeedMode; storageKey?: string }>) => {
+  const adapter = useMemo(() => localStorageAdapter<Partial<GardenData>>(storageKey), [storageKey]);
+  const [data, setData] = useState<GardenData>(() => createInitialData(seedMode));
   const [ready, setReady] = useState(false);
-  useEffect(() => { void adapter.load().then((saved) => { setData(migrateGardenData(saved)); setReady(true); }); }, []);
-  useEffect(() => { if (ready) void adapter.save(data); }, [data, ready]);
+  useEffect(() => {
+    let mounted = true;
+    setReady(false);
+    setData(createInitialData(seedMode));
+    void adapter.load().then((saved) => {
+      if (!mounted) return;
+      setData(saved ? migrateGardenData(saved) : createInitialData(seedMode));
+      setReady(true);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [adapter, seedMode]);
+  useEffect(() => { if (ready) void adapter.save(data); }, [adapter, data, ready]);
   const userContext = useMemo(() => deriveUserContext(data), [data]);
   const value = useMemo<GardenContextValue>(() => ({
     data, userContext, ready, update: (recipe) => setData((current) => recipe(current)),
-    reset: async () => { await adapter.clear(); setData(createSeedData(todayKey())); },
-  }), [data, ready, userContext]);
+    reset: async () => { await adapter.clear(); setData(createInitialData(seedMode)); },
+  }), [adapter, data, ready, seedMode, userContext]);
   return <GardenContext.Provider value={value}>{children}</GardenContext.Provider>;
 };
 
