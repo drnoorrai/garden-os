@@ -144,11 +144,11 @@ export const LoginPage = () => {
         <div className="mb-8 flex items-center justify-between gap-4">
           <div>
             <p className="font-serif text-4xl tracking-tight">Garden OS</p>
-            <p className="mt-2 text-sm text-muted">Sign in to your calm operating system.</p>
+            <p className="mt-2 text-sm text-muted">Sign in to start with a clean Garden.</p>
           </div>
           <Pill>private beta</Pill>
         </div>
-        <SectionHeading title="Welcome back" supporting="Use a magic link or continue with Google. No password is required." />
+        <SectionHeading title="Welcome back" supporting="Use a magic link or continue with Google. Your private workspace starts fresh." />
         <form className="space-y-4" onSubmit={submitEmail}>
           <div>
             <Label htmlFor="email">Email</Label>

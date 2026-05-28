@@ -173,6 +173,15 @@ export const TodayPage = () => {
                   }
                 />
                 <div className="space-y-2.5">
+                  {tasks.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-ink/10 bg-mist/30 p-5 text-sm leading-6 text-muted">
+                      {tier === "big"
+                        ? "Start by naming one meaningful thing. This is the work the day protects."
+                        : tier === "medium"
+                          ? "Add supporting moves only if they make the day clearer."
+                          : "Small tasks belong here when they reduce friction, not when they create noise."}
+                    </div>
+                  ) : null}
                   {tasks.map((task, index) => (
                     <TaskRow
                       key={task.id}

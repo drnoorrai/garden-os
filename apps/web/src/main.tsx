@@ -2,8 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "@garden/auth";
-import { App } from "./App";
-import { GardenProvider } from "@garden/shared-state";
+import { GardenRoot } from "./GardenRoot";
 import "./index.css";
 
 const authConfig = {
@@ -16,9 +15,7 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider config={authConfig}>
-        <GardenProvider>
-          <App />
-        </GardenProvider>
+        <GardenRoot />
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>,

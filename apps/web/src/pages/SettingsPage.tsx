@@ -11,7 +11,7 @@ export const SettingsPage = () => {
     <div className="max-w-2xl">
       <header className="mb-8">
         <h1 className="font-serif text-4xl tracking-[-0.045em] sm:text-5xl">Settings</h1>
-        <p className="mt-3 text-muted">Your Garden lives locally on this device in V1.</p>
+        <p className="mt-3 text-muted">Your private Garden starts clean; public examples stay on the landing page.</p>
       </header>
       <Card className="p-6 sm:p-8">
         <SectionHeading title="Profile" supporting="Used to shape your daily view." />
@@ -27,8 +27,8 @@ export const SettingsPage = () => {
           <Button type="submit">Save profile</Button>
         </form>
         <div className="mt-9 border-t border-ink/6 pt-6">
-          <p className="mb-4 text-sm leading-6 text-muted">Resetting restores the realistic demo day and removes changes stored in this browser.</p>
-          <Button variant="danger" onClick={() => void reset()}>Reset local data</Button>
+          <p className="mb-4 text-sm leading-6 text-muted">Resetting clears your private workspace and returns to the onboarding starter state.</p>
+          <Button variant="danger" onClick={() => void reset()}>Reset my Garden</Button>
         </div>
       </Card>
     </div>

@@ -145,6 +145,7 @@ export const createSeedData = (date = todayKey()): GardenData => ({
     name: "Noor",
     focusTheme: "Build a life with enough space to notice it.",
     proteinTarget: 125,
+    onboardingComplete: true,
   },
   plans: [
     {
@@ -292,3 +293,58 @@ export const createSeedData = (date = todayKey()): GardenData => ({
     { id: createId(), weekOf: date, focus: "Make the daily operating loop trustworthy.", capacity: 3, commitments: ["Today intelligence", "Evening review", "Train integration"] },
   ],
 });
+
+export const createFreshData = (date = todayKey()): GardenData => {
+  const seed = createSeedData(date);
+  return {
+    ...seed,
+    profile: {
+      id: "new-user",
+      name: "You",
+      focusTheme: "Build a day that feels clear, humane and possible.",
+      proteinTarget: 120,
+      onboardingComplete: false,
+    },
+    plans: [
+      {
+        date,
+        focusHours: 2,
+        energy: 3,
+        hydrationComplete: false,
+        activeClarityGoal: "Name what matters before the day gets noisy.",
+        reflectionPrompt: "What would make today feel well spent?",
+        mealSuggestion: "Choose one simple protein-forward meal.",
+        tasks: [],
+      },
+    ],
+    reviews: [],
+    claritySessions: [],
+    fieldNotes: [],
+    workItems: [],
+    bets: [],
+    kanbanCards: [],
+    training: [],
+    train: {
+      ...seed.train,
+      sets: [],
+      sessions: [],
+      activeSessionId: undefined,
+    },
+    meals: [],
+    mealPlans: [],
+    groceries: [],
+    projects: [],
+    journal: [],
+    decisions: [],
+    mentalModels: [],
+    sprints: [
+      {
+        id: createId(),
+        weekOf: date,
+        focus: "Choose one meaningful direction for this week.",
+        capacity: 3,
+        commitments: [],
+      },
+    ],
+  };
+};

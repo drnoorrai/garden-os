@@ -1,7 +1,10 @@
 import { LoginPage, RequireAuth } from "@garden/auth";
+import { useGarden } from "@garden/shared-state";
 import { lazy, Suspense } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
+import { LandingPage } from "./pages/LandingPage";
+import { OnboardingPage } from "./pages/OnboardingPage";
 import { ReviewPage } from "./pages/ReviewPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { TodayPage } from "./pages/TodayPage";
@@ -14,28 +17,41 @@ const EatRoutes = lazy(() => import("@garden/module-eat").then((module) => ({ de
 
 const LoadingModule = () => <p className="py-14 text-sm text-muted">Opening module...</p>;
 
+const PrivateRoutes = () => {
+  const { data, ready } = useGarden();
+  const location = useLocation();
+  if (!ready) return <p className="py-14 text-sm text-muted">Preparing your Garden...</p>;
+  if (!data.profile.onboardingComplete && location.pathname !== "/onboarding") {
+    return <Navigate replace to="/onboarding" />;
+  }
+  return (
+    <Suspense fallback={<LoadingModule />}>
+      <Routes>
+        <Route path="/today" element={<TodayPage />} />
+        <Route path="/onboarding" element={<OnboardingPage />} />
+        <Route path="/train/*" element={<TrainRoutes />} />
+        <Route path="/think/*" element={<ThinkRoutes />} />
+        <Route path="/work/*" element={<WorkRoutes />} />
+        <Route path="/eat/*" element={<EatRoutes />} />
+        <Route path="/review" element={<ReviewPage />} />
+        <Route path="/weekly-review" element={<WeeklyReviewPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="*" element={<Navigate replace to="/today" />} />
+      </Routes>
+    </Suspense>
+  );
+};
+
 export const App = () => (
   <Routes>
+    <Route path="/" element={<LandingPage />} />
     <Route path="/login" element={<LoginPage />} />
     <Route
       path="*"
       element={
         <RequireAuth>
           <AppShell>
-            <Suspense fallback={<LoadingModule />}>
-              <Routes>
-                <Route path="/" element={<Navigate replace to="/today" />} />
-                <Route path="/today" element={<TodayPage />} />
-                <Route path="/train/*" element={<TrainRoutes />} />
-                <Route path="/think/*" element={<ThinkRoutes />} />
-                <Route path="/work/*" element={<WorkRoutes />} />
-                <Route path="/eat/*" element={<EatRoutes />} />
-                <Route path="/review" element={<ReviewPage />} />
-                <Route path="/weekly-review" element={<WeeklyReviewPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="*" element={<Navigate replace to="/today" />} />
-              </Routes>
-            </Suspense>
+            <PrivateRoutes />
           </AppShell>
         </RequireAuth>
       }

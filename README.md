@@ -9,6 +9,9 @@ The product goal is simple: opening the app should make life feel organized.
 ## V2 Experience
 
 - `Today` aggregates live signals from every module through deterministic Today intelligence.
+- `/` is a public, example-filled landing page showing how a healthtech founder might use Garden OS.
+- New private workspaces start fresh after login, with example content kept out of account data.
+- First-run onboarding explains Today, the modules and the evening review loop before opening the workspace.
 - `Train` brings the core Tension experience into Garden OS: workout templates, session flow, movement system, hard-set volume, phase-aware targets and history.
 - `Think` combines Clarity, Field Notes, Journal, Decisions and Mental Models into one private thinking system.
 - `Work` unifies GTD capture, Rai Bets prioritization, Task Garden execution, MoSCoW project scope and weekly sprint focus.
@@ -57,7 +60,10 @@ The current AI layer is deterministic by design. It produces summaries, recommen
 
 | Route | Purpose |
 | --- | --- |
-| `/today` | Daily control centre and default landing page |
+| `/` | Public healthtech-founder example landing page |
+| `/login` | Email magic-link and Google sign-in |
+| `/onboarding` | First-run walkthrough for fresh private workspaces |
+| `/today` | Daily control centre |
 | `/train`, `/train/session`, `/train/history`, `/train/settings` | Training week, workout flow, history and structure |
 | `/think` | Thinking system overview |
 | `/think/clarity` | Guided clarity sessions |
@@ -99,7 +105,7 @@ pnpm build
 
 ## Storage
 
-Garden OS is local-first. The browser storage key remains `garden-os:v1` so existing V1 data can be migrated in place.
+Garden OS is local-first. Public examples live on the landing page, while private user workspaces use fresh local data keyed by account when authentication is configured.
 
 `@garden/storage` includes a typed `supabaseAdapter` placeholder for future sync, but V2 does not require accounts, a backend or environment variables.
 
