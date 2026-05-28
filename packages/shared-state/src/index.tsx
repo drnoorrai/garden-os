@@ -1,6 +1,6 @@
-import { createSeedData, getPlan, nextDayKey, todayKey } from "@garden/domain";
+import { createId, createSeedData, getPlan, nextDayKey, todayKey } from "@garden/domain";
 import { localStorageAdapter } from "@garden/storage";
-import type { DailyPlan, GardenData, UserContext } from "@garden/types";
+import type { DailyPlan, GardenData, UserContext, WorkItemKind } from "@garden/types";
 import { createContext, type PropsWithChildren, useContext, useEffect, useMemo, useState } from "react";
 
 const STORAGE_KEY = "garden-os:v1";
@@ -56,6 +56,18 @@ export const changePlan = (data: GardenData, date: string, change: (plan: DailyP
   const existing = data.plans.some((plan) => plan.date === date);
   const plan = change(getPlan(data, date));
   return { ...data, plans: existing ? data.plans.map((item) => item.date === date ? plan : item) : [...data.plans, plan] };
+};
+
+export const captureItem = (data: GardenData, title: string, kind: WorkItemKind = "thought"): GardenData => {
+  const trimmed = title.trim();
+  if (!trimmed) return data;
+  return {
+    ...data,
+    workItems: [
+      { id: createId(), createdAt: new Date().toISOString(), title: trimmed, kind, triage: "untriaged" },
+      ...data.workItems,
+    ],
+  };
 };
 
 export const deferTask = (data: GardenData, date: string, taskId: string): GardenData => {
