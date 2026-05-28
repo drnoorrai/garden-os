@@ -1,15 +1,29 @@
 import { buildTodayIntelligence } from "@garden/ai";
-import { capacityForTier, createId, getPlan, orderedTasks, tierLabel, todayKey } from "@garden/domain";
+import {
+  capacityForTier,
+  createId,
+  getPlan,
+  minuteLabel,
+  minuteToTimeValue,
+  orderedTasks,
+  parseTimeValue,
+  tendingStreak,
+  tierLabel,
+  todayKey,
+} from "@garden/domain";
 import { getTodaySummary as getEatSummary } from "@garden/module-eat/summary";
 import { getTodaySummary as getThinkSummary } from "@garden/module-think/summary";
 import { getTodaySummary as getTrainSummary } from "@garden/module-train/summary";
 import { getTodaySummary as getWorkSummary } from "@garden/module-work/summary";
-import { changePlan, deferTask, useGarden } from "@garden/shared-state";
+import { changePlan, deferTask, scheduleTask, useGarden } from "@garden/shared-state";
 import type { DailyTask, TaskTier } from "@garden/types";
 import { Button, Card, cn, Input, Pill, SectionHeading } from "@garden/ui";
-import { ArrowRight, CalendarDays, Check, GripVertical, Plus, RotateCcw } from "lucide-react";
+import { ArrowRight, Check, Clock, GripVertical, Plus, RotateCcw, Sprout } from "lucide-react";
 import { type DragEvent, type ReactNode, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { DayTimeline } from "../components/DayTimeline";
+import { SwipeableRow } from "../components/SwipeableRow";
+import { useLongPress } from "../components/useLongPress";
 
 const formatDate = (date: string) =>
   new Date(`${date}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
@@ -35,6 +49,7 @@ export const TodayPage = () => {
   const [editing, setEditing] = useState<string | null>(null);
   const [dragged, setDragged] = useState<string | null>(null);
   const completedCount = plan.tasks.filter((task) => task.status === "completed").length;
+  const streak = tendingStreak(data, date);
 
   const attentionCount = useMemo(
     () => work.blockers,
@@ -61,6 +76,34 @@ export const TodayPage = () => {
     );
     setDraft("");
     setAddingTier(null);
+  };
+
+  const toggleComplete = (taskId: string) =>
+    update((current) =>
+      changePlan(current, date, (currentPlan) => ({
+        ...currentPlan,
+        tasks: currentPlan.tasks.map((item) =>
+          item.id === taskId ? { ...item, status: item.status === "completed" ? "active" : "completed" } : item,
+        ),
+      })),
+    );
+
+  const defer = (taskId: string) => update((current) => deferTask(current, date, taskId));
+
+  const schedule = (taskId: string, startMinute: number | null) =>
+    update((current) => scheduleTask(current, date, taskId, startMinute));
+
+  const submitEdit = (taskId: string, rawTitle: string) => {
+    const title = rawTitle.trim();
+    if (title) {
+      update((current) =>
+        changePlan(current, date, (currentPlan) => ({
+          ...currentPlan,
+          tasks: currentPlan.tasks.map((item) => (item.id === taskId ? { ...item, title } : item)),
+        })),
+      );
+    }
+    setEditing(null);
   };
 
   const reorder = (target: DailyTask) => {
@@ -90,10 +133,27 @@ export const TodayPage = () => {
           </h1>
           <p className="mt-3 text-base text-muted">{formatDate(date)}</p>
         </div>
-        <div className="text-sm text-muted">
-          <span className="font-medium text-forest">{completedCount}</span> of {plan.tasks.length} tended today
+        <div className="flex items-center gap-4 text-sm text-muted">
+          {streak > 0 ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-sage/12 px-2.5 py-1 font-medium text-forest" title="Consecutive days you tended your garden">
+              <Sprout size={14} />
+              {streak}-day streak
+            </span>
+          ) : null}
+          <span>
+            <span className="font-medium text-forest">{completedCount}</span> of {plan.tasks.length} tended today
+          </span>
         </div>
       </section>
+      <Card className="mb-6 !border-sage/25 !bg-[#f1f2eb] p-5 shadow-none xl:hidden">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-forest/70">Daily briefing</p>
+          <span className="text-sm font-medium text-forest">{plan.focusHours}h focus</span>
+        </div>
+        <p className="mt-3 font-serif text-xl leading-7 tracking-tight text-ink">{briefing.summary}</p>
+        {briefing.warnings[0] ? <p className="mt-2 text-sm leading-6 text-clay">{briefing.warnings[0]}</p> : null}
+        <p className="mt-3 border-t border-forest/10 pt-3 text-sm text-forest">{briefing.suggestedNextAction}</p>
+      </Card>
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(500px,1.15fr)_minmax(320px,.85fr)]">
         <div className="space-y-6">
           {(["big", "medium", "small"] as TaskTier[]).map((tier) => {
@@ -114,82 +174,20 @@ export const TodayPage = () => {
                 />
                 <div className="space-y-2.5">
                   {tasks.map((task, index) => (
-                    <div
+                    <TaskRow
                       key={task.id}
-                      draggable
+                      task={task}
+                      isBig={tier === "big"}
+                      showNextBadge={index === 0 && tier === "medium"}
+                      isEditing={editing === task.id}
+                      onStartEdit={() => setEditing(task.id)}
+                      onSubmitEdit={(title) => submitEdit(task.id, title)}
+                      onToggle={() => toggleComplete(task.id)}
+                      onDefer={() => defer(task.id)}
+                      onSchedule={(startMinute) => schedule(task.id, startMinute)}
                       onDragStart={() => setDragged(task.id)}
-                      onDragOver={(event: DragEvent) => event.preventDefault()}
                       onDrop={() => reorder(task)}
-                      className={cn(
-                        "group flex items-center gap-2 rounded-2xl border px-2.5 py-2 transition",
-                        tier === "big" ? "border-forest/8 bg-mist/45 py-4" : "border-transparent hover:border-ink/5 hover:bg-mist/35",
-                        task.status === "completed" && "opacity-55",
-                      )}
-                    >
-                      <GripVertical className="shrink-0 text-muted/45" size={15} />
-                      <button
-                        aria-label={`Complete ${task.title}`}
-                        onClick={() =>
-                          update((current) =>
-                            changePlan(current, date, (currentPlan) => ({
-                              ...currentPlan,
-                              tasks: currentPlan.tasks.map((item) =>
-                                item.id === task.id
-                                  ? { ...item, status: item.status === "completed" ? "active" : "completed" }
-                                  : item,
-                              ),
-                            })),
-                          )
-                        }
-                        className={cn(
-                          "flex size-6 shrink-0 items-center justify-center rounded-full border transition",
-                          task.status === "completed" ? "border-forest bg-forest text-white" : "border-sage/55 hover:border-forest",
-                        )}
-                      >
-                        {task.status === "completed" ? <Check size={14} /> : null}
-                      </button>
-                      {editing === task.id ? (
-                        <Input
-                          autoFocus
-                          defaultValue={task.title}
-                          onBlur={(event) => {
-                            const title = event.target.value.trim();
-                            if (title) {
-                              update((current) =>
-                                changePlan(current, date, (currentPlan) => ({
-                                  ...currentPlan,
-                                  tasks: currentPlan.tasks.map((item) => (item.id === task.id ? { ...item, title } : item)),
-                                })),
-                              );
-                            }
-                            setEditing(null);
-                          }}
-                          onKeyDown={(event) => event.key === "Enter" && event.currentTarget.blur()}
-                          className="h-9"
-                        />
-                      ) : (
-                        <button
-                          onDoubleClick={() => setEditing(task.id)}
-                          className={cn(
-                            "min-w-0 flex-1 text-left text-sm text-ink sm:text-[15px]",
-                            tier === "big" && "text-base font-medium",
-                            task.status === "completed" && "line-through",
-                          )}
-                        >
-                          {index === 0 && tier === "medium" ? <span className="mr-2 text-xs text-muted">NEXT</span> : null}
-                          {task.title}
-                        </button>
-                      )}
-                      {task.estimateMinutes ? <span className="hidden text-xs text-muted sm:inline">{task.estimateMinutes}m</span> : null}
-                      <Button
-                        variant="quiet"
-                        className="h-8 min-h-8 px-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-                        title="Move to tomorrow"
-                        onClick={() => update((current) => deferTask(current, date, task.id))}
-                      >
-                        <RotateCcw size={14} />
-                      </Button>
-                    </div>
+                    />
                   ))}
                   {addingTier === tier ? (
                     <form
@@ -209,22 +207,13 @@ export const TodayPage = () => {
           })}
         </div>
         <div className="space-y-5">
-          <Card className="!border-sage/25 !bg-[#f1f2eb] p-6 shadow-none">
+          <DayTimeline tasks={plan.tasks} focusHours={plan.focusHours} onUnschedule={(taskId) => schedule(taskId, null)} />
+          <Card className="hidden !border-sage/25 !bg-[#f1f2eb] p-6 shadow-none xl:block">
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-forest/70">Daily briefing</p>
             <p className="mt-4 font-serif text-2xl leading-8 tracking-tight text-ink">{briefing.summary}</p>
             <p className="mt-4 text-sm leading-6 text-muted">{briefing.recommendations[0]}</p>
             {briefing.warnings[0] ? <p className="mt-3 text-sm leading-6 text-clay">{briefing.warnings[0]}</p> : null}
             <div className="mt-6 border-t border-forest/10 pt-4 text-sm text-forest">{briefing.suggestedNextAction}</div>
-          </Card>
-          <Card className="p-5 sm:p-6">
-            <div className="flex items-start gap-3">
-              <CalendarDays className="mt-1 text-sage" size={19} />
-              <div>
-                <p className="text-sm text-muted">Calendar reality</p>
-                <p className="mt-2 text-lg font-medium tracking-tight">You realistically have</p>
-                <p className="font-serif text-[2.25rem] tracking-tight text-forest">{plan.focusHours} focused hours today.</p>
-              </div>
-            </div>
           </Card>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
             <SupportCard title="Train" href="/train">
@@ -262,6 +251,137 @@ export const TodayPage = () => {
         </div>
       </div>
     </>
+  );
+};
+
+const TaskRow = ({
+  task,
+  isBig,
+  showNextBadge,
+  isEditing,
+  onStartEdit,
+  onSubmitEdit,
+  onToggle,
+  onDefer,
+  onSchedule,
+  onDragStart,
+  onDrop,
+}: {
+  task: DailyTask;
+  isBig: boolean;
+  showNextBadge: boolean;
+  isEditing: boolean;
+  onStartEdit: () => void;
+  onSubmitEdit: (title: string) => void;
+  onToggle: () => void;
+  onDefer: () => void;
+  onSchedule: (startMinute: number | null) => void;
+  onDragStart: () => void;
+  onDrop: () => void;
+}) => {
+  const completed = task.status === "completed";
+  const neglected = (task.deferCount ?? 0) >= 2 && !completed;
+  const longPress = useLongPress(onStartEdit);
+  const [picking, setPicking] = useState(false);
+  return (
+    <SwipeableRow completed={completed} onComplete={onToggle} onDefer={onDefer}>
+      <div
+        draggable
+        onDragStart={onDragStart}
+        onDragOver={(event: DragEvent) => event.preventDefault()}
+        onDrop={onDrop}
+        className={cn(
+          "group flex items-center gap-2 rounded-2xl border px-2.5 py-2 transition",
+          isBig ? "border-forest/8 bg-mist/45 py-4" : "border-transparent bg-white hover:border-ink/5 hover:bg-mist/35",
+          completed && "opacity-55",
+        )}
+      >
+        <GripVertical className="hidden shrink-0 text-muted/45 lg:block" size={15} />
+        <button
+          aria-label={`Complete ${task.title}`}
+          onClick={onToggle}
+          className={cn(
+            "flex size-6 shrink-0 items-center justify-center rounded-full border transition",
+            completed ? "border-forest bg-forest text-white" : "border-sage/55 hover:border-forest",
+          )}
+        >
+          {completed ? <Check size={14} /> : null}
+        </button>
+        {isEditing ? (
+          <Input
+            autoFocus
+            defaultValue={task.title}
+            onBlur={(event) => onSubmitEdit(event.target.value)}
+            onKeyDown={(event) => event.key === "Enter" && event.currentTarget.blur()}
+            className="h-9"
+          />
+        ) : (
+          <button
+            onDoubleClick={onStartEdit}
+            {...longPress}
+            className={cn(
+              "min-w-0 flex-1 text-left text-sm text-ink sm:text-[15px]",
+              isBig && "text-base font-medium",
+              completed && "line-through",
+            )}
+          >
+            {showNextBadge ? <span className="mr-2 text-xs text-muted">NEXT</span> : null}
+            {task.title}
+          </button>
+        )}
+        {neglected ? (
+          <span
+            title={`Carried over ${task.deferCount} times — maybe today?`}
+            className="flex shrink-0 items-center gap-1 text-clay"
+          >
+            <span className="size-1.5 rounded-full bg-clay" />
+            <span className="hidden text-[11px] font-medium sm:inline">carried {task.deferCount}×</span>
+          </span>
+        ) : null}
+        {task.estimateMinutes ? <span className="hidden text-xs text-muted sm:inline">{task.estimateMinutes}m</span> : null}
+        {picking ? (
+          <input
+            type="time"
+            autoFocus
+            defaultValue={task.startMinute != null ? minuteToTimeValue(task.startMinute) : ""}
+            onChange={(event) => {
+              const minute = parseTimeValue(event.target.value);
+              if (minute != null) onSchedule(minute);
+            }}
+            onBlur={() => setPicking(false)}
+            className="h-8 rounded-lg border border-ink/8 bg-white px-2 text-xs text-ink outline-none focus:border-sage"
+          />
+        ) : task.startMinute != null ? (
+          <button
+            onClick={() => setPicking(true)}
+            title="Change time"
+            className="flex shrink-0 items-center gap-1 rounded-full bg-forest/8 px-2 py-1 text-[11px] font-medium text-forest transition hover:bg-forest/15"
+          >
+            <Clock size={12} />
+            {minuteLabel(task.startMinute)}
+          </button>
+        ) : (
+          <button
+            aria-label="Schedule a time"
+            title="Schedule a time"
+            onClick={() => setPicking(true)}
+            className="shrink-0 rounded-md p-1.5 text-muted/55 transition hover:bg-mist hover:text-ink sm:opacity-0 sm:group-hover:opacity-100"
+          >
+            <Clock size={15} />
+          </button>
+        )}
+        <span className="hidden sm:block">
+          <Button
+            variant="quiet"
+            className="h-8 min-h-8 px-2 opacity-0 transition group-hover:opacity-100"
+            title="Move to tomorrow"
+            onClick={onDefer}
+          >
+            <RotateCcw size={14} />
+          </Button>
+        </span>
+      </div>
+    </SwipeableRow>
   );
 };
 

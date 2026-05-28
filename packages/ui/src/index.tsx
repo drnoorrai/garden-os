@@ -1,12 +1,13 @@
 import { clsx, type ClassValue } from "clsx";
-import type {
-  ButtonHTMLAttributes,
-  HTMLAttributes,
-  InputHTMLAttributes,
-  LabelHTMLAttributes,
-  PropsWithChildren,
-  ReactNode,
-  TextareaHTMLAttributes,
+import {
+  type ButtonHTMLAttributes,
+  forwardRef,
+  type HTMLAttributes,
+  type InputHTMLAttributes,
+  type LabelHTMLAttributes,
+  type PropsWithChildren,
+  type ReactNode,
+  type TextareaHTMLAttributes,
 } from "react";
 
 export const cn = (...classes: ClassValue[]) => clsx(classes);
@@ -51,15 +52,19 @@ export const Button = ({
   />
 );
 
-export const Input = ({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) => (
-  <input
-    className={cn(
-      "h-11 w-full rounded-xl border border-ink/8 bg-white px-3.5 text-sm text-ink outline-none placeholder:text-muted/70 focus:border-sage focus:ring-2 focus:ring-sage/15",
-      className,
-    )}
-    {...props}
-  />
+export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
+  ({ className, ...props }, ref) => (
+    <input
+      ref={ref}
+      className={cn(
+        "h-11 w-full rounded-xl border border-ink/8 bg-white px-3.5 text-sm text-ink outline-none placeholder:text-muted/70 focus:border-sage focus:ring-2 focus:ring-sage/15",
+        className,
+      )}
+      {...props}
+    />
+  ),
 );
+Input.displayName = "Input";
 
 export const Textarea = ({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) => (
   <textarea

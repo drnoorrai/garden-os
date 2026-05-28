@@ -1,8 +1,9 @@
 import { useAuth } from "@garden/auth";
 import { Button, cn } from "@garden/ui";
-import { BookOpen, Dumbbell, House, Leaf, LogOut, Settings, SquareCheckBig, UtensilsCrossed } from "lucide-react";
-import type { PropsWithChildren } from "react";
+import { BookOpen, Dumbbell, House, Leaf, LogOut, Plus, Settings, SquareCheckBig, UtensilsCrossed } from "lucide-react";
+import { type PropsWithChildren, useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
+import { QuickCapture } from "./QuickCapture";
 
 const primary = [
   { to: "/today", label: "Today", icon: House },
@@ -16,6 +17,18 @@ export const AppShell = ({ children }: PropsWithChildren) => {
   const navigate = useNavigate();
   const auth = useAuth();
   const accountLabel = auth.user?.email ?? (auth.enabled ? "Signed in" : "Local mode");
+  const [captureOpen, setCaptureOpen] = useState(false);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCaptureOpen((open) => !open);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   return (
     <div className="min-h-screen bg-canvas text-ink">
@@ -46,6 +59,18 @@ export const AppShell = ({ children }: PropsWithChildren) => {
             </NavLink>
           ))}
         </nav>
+        <button
+          onClick={() => setCaptureOpen(true)}
+          className="mt-6 flex h-11 items-center justify-between gap-2 rounded-2xl border border-ink/8 bg-white/70 px-4 text-sm font-medium text-muted transition hover:text-ink"
+        >
+          <span className="flex items-center gap-2.5">
+            <Plus size={17} strokeWidth={1.8} />
+            Quick capture
+          </span>
+          <kbd className="rounded-md border border-ink/10 bg-mist px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-muted">
+            ⌘K
+          </kbd>
+        </button>
         <div className="mt-auto space-y-3">
           <div className="rounded-2xl bg-white/70 p-3 text-xs text-muted">
             <p className="font-medium text-ink">{accountLabel}</p>
@@ -78,7 +103,14 @@ export const AppShell = ({ children }: PropsWithChildren) => {
       <main className="mx-auto max-w-[1240px] px-5 pb-28 pt-7 sm:px-8 lg:ml-64 lg:px-12 lg:pb-12 lg:pt-11">
         {children}
       </main>
-      <nav className="fixed inset-x-3 bottom-3 z-20 flex items-center justify-around rounded-[1.4rem] border border-ink/6 bg-white/96 p-2 shadow-card backdrop-blur lg:hidden">
+      <button
+        aria-label="Quick capture"
+        onClick={() => setCaptureOpen(true)}
+        className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.25rem)] right-4 z-30 flex size-14 items-center justify-center rounded-full bg-forest text-white shadow-card transition active:scale-95 lg:hidden"
+      >
+        <Plus size={24} strokeWidth={2} />
+      </button>
+      <nav className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-20 flex items-center justify-around rounded-[1.4rem] border border-ink/6 bg-white/96 p-2 shadow-card backdrop-blur lg:hidden">
         {primary.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
@@ -92,6 +124,7 @@ export const AppShell = ({ children }: PropsWithChildren) => {
           </NavLink>
         ))}
       </nav>
+      <QuickCapture open={captureOpen} onClose={() => setCaptureOpen(false)} />
     </div>
   );
 };
