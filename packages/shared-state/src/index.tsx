@@ -90,7 +90,19 @@ export const deferTask = (data: GardenData, date: string, taskId: string): Garde
   return changePlan(
     changePlan(data, date, (plan) => ({ ...plan, tasks: plan.tasks.filter((task) => task.id !== taskId) })),
     tomorrow,
-    (plan) => ({ ...plan, tasks: [...plan.tasks, { ...item, status: "active", scheduledDate: tomorrow, order: plan.tasks.filter((task) => task.tier === item.tier).length }] }),
+    (plan) => ({
+      ...plan,
+      tasks: [
+        ...plan.tasks,
+        {
+          ...item,
+          status: "active",
+          scheduledDate: tomorrow,
+          order: plan.tasks.filter((task) => task.tier === item.tier).length,
+          deferCount: (item.deferCount ?? 0) + 1,
+        },
+      ],
+    }),
   );
 };
 

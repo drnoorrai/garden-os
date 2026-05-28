@@ -8,6 +8,12 @@ export const nextDayKey = (date: string) => {
   return value.toISOString().slice(0, 10);
 };
 
+export const prevDayKey = (date: string) => {
+  const value = new Date(`${date}T12:00:00`);
+  value.setDate(value.getDate() - 1);
+  return value.toISOString().slice(0, 10);
+};
+
 export const createId = () => crypto.randomUUID();
 
 export const capacityForTier: Record<TaskTier, number> = {
@@ -89,6 +95,25 @@ export const dayWindow = (tasks: DailyTask[]) => {
     end = Math.max(end, Math.ceil(to / 60) * 60);
   }
   return { start: Math.max(0, start), end: Math.min(24 * 60, end) };
+};
+
+/** A day counts as "tended" if it was reviewed or had at least one task completed. */
+const wasTended = (data: GardenData, date: string) =>
+  data.reviews.some((review) => review.date === date) ||
+  (data.plans.find((plan) => plan.date === date)?.tasks.some((task) => task.status === "completed") ?? false);
+
+/**
+ * Consecutive tended days ending today. Today still pending does not break the
+ * streak — it counts back from yesterday until the first untended day.
+ */
+export const tendingStreak = (data: GardenData, today = todayKey()): number => {
+  let streak = 0;
+  let cursor = wasTended(data, today) ? today : prevDayKey(today);
+  while (wasTended(data, cursor)) {
+    streak += 1;
+    cursor = prevDayKey(cursor);
+  }
+  return streak;
 };
 
 export const categorizeBet = (bet: Bet) => {

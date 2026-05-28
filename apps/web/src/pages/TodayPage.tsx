@@ -7,6 +7,7 @@ import {
   minuteToTimeValue,
   orderedTasks,
   parseTimeValue,
+  tendingStreak,
   tierLabel,
   todayKey,
 } from "@garden/domain";
@@ -17,7 +18,7 @@ import { getTodaySummary as getWorkSummary } from "@garden/module-work/summary";
 import { changePlan, deferTask, scheduleTask, useGarden } from "@garden/shared-state";
 import type { DailyTask, TaskTier } from "@garden/types";
 import { Button, Card, cn, Input, Pill, SectionHeading } from "@garden/ui";
-import { ArrowRight, Check, Clock, GripVertical, Plus, RotateCcw } from "lucide-react";
+import { ArrowRight, Check, Clock, GripVertical, Plus, RotateCcw, Sprout } from "lucide-react";
 import { type DragEvent, type ReactNode, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { DayTimeline } from "../components/DayTimeline";
@@ -48,6 +49,7 @@ export const TodayPage = () => {
   const [editing, setEditing] = useState<string | null>(null);
   const [dragged, setDragged] = useState<string | null>(null);
   const completedCount = plan.tasks.filter((task) => task.status === "completed").length;
+  const streak = tendingStreak(data, date);
 
   const attentionCount = useMemo(
     () => work.blockers,
@@ -131,8 +133,16 @@ export const TodayPage = () => {
           </h1>
           <p className="mt-3 text-base text-muted">{formatDate(date)}</p>
         </div>
-        <div className="text-sm text-muted">
-          <span className="font-medium text-forest">{completedCount}</span> of {plan.tasks.length} tended today
+        <div className="flex items-center gap-4 text-sm text-muted">
+          {streak > 0 ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-sage/12 px-2.5 py-1 font-medium text-forest" title="Consecutive days you tended your garden">
+              <Sprout size={14} />
+              {streak}-day streak
+            </span>
+          ) : null}
+          <span>
+            <span className="font-medium text-forest">{completedCount}</span> of {plan.tasks.length} tended today
+          </span>
         </div>
       </section>
       <Card className="mb-6 !border-sage/25 !bg-[#f1f2eb] p-5 shadow-none xl:hidden">
@@ -270,6 +280,7 @@ const TaskRow = ({
   onDrop: () => void;
 }) => {
   const completed = task.status === "completed";
+  const neglected = (task.deferCount ?? 0) >= 2 && !completed;
   const longPress = useLongPress(onStartEdit);
   const [picking, setPicking] = useState(false);
   return (
@@ -318,6 +329,15 @@ const TaskRow = ({
             {task.title}
           </button>
         )}
+        {neglected ? (
+          <span
+            title={`Carried over ${task.deferCount} times — maybe today?`}
+            className="flex shrink-0 items-center gap-1 text-clay"
+          >
+            <span className="size-1.5 rounded-full bg-clay" />
+            <span className="hidden text-[11px] font-medium sm:inline">carried {task.deferCount}×</span>
+          </span>
+        ) : null}
         {task.estimateMinutes ? <span className="hidden text-xs text-muted sm:inline">{task.estimateMinutes}m</span> : null}
         {picking ? (
           <input

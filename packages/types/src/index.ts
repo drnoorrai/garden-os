@@ -28,6 +28,8 @@ export interface DailyTask {
   estimateMinutes?: number;
   /** Minutes from midnight for a planned start time, when the task is placed on the day timeline. */
   startMinute?: number;
+  /** How many times this task has been pushed to a later day. Drives gentle neglect cues. */
+  deferCount?: number;
 }
 
 export interface DailyPlan {
