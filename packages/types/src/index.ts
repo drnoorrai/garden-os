@@ -26,6 +26,8 @@ export interface DailyTask {
   status: TaskStatus;
   scheduledDate: string;
   estimateMinutes?: number;
+  /** Minutes from midnight for a planned start time, when the task is placed on the day timeline. */
+  startMinute?: number;
 }
 
 export interface DailyPlan {

@@ -70,6 +70,19 @@ export const captureItem = (data: GardenData, title: string, kind: WorkItemKind 
   };
 };
 
+export const scheduleTask = (
+  data: GardenData,
+  date: string,
+  taskId: string,
+  startMinute: number | null,
+): GardenData =>
+  changePlan(data, date, (plan) => ({
+    ...plan,
+    tasks: plan.tasks.map((task) =>
+      task.id === taskId ? { ...task, startMinute: startMinute ?? undefined } : task,
+    ),
+  }));
+
 export const deferTask = (data: GardenData, date: string, taskId: string): GardenData => {
   const item = getPlan(data, date).tasks.find((task) => task.id === taskId);
   if (!item) return data;

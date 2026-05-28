@@ -1,15 +1,26 @@
 import { buildTodayIntelligence } from "@garden/ai";
-import { capacityForTier, createId, getPlan, orderedTasks, tierLabel, todayKey } from "@garden/domain";
+import {
+  capacityForTier,
+  createId,
+  getPlan,
+  minuteLabel,
+  minuteToTimeValue,
+  orderedTasks,
+  parseTimeValue,
+  tierLabel,
+  todayKey,
+} from "@garden/domain";
 import { getTodaySummary as getEatSummary } from "@garden/module-eat/summary";
 import { getTodaySummary as getThinkSummary } from "@garden/module-think/summary";
 import { getTodaySummary as getTrainSummary } from "@garden/module-train/summary";
 import { getTodaySummary as getWorkSummary } from "@garden/module-work/summary";
-import { changePlan, deferTask, useGarden } from "@garden/shared-state";
+import { changePlan, deferTask, scheduleTask, useGarden } from "@garden/shared-state";
 import type { DailyTask, TaskTier } from "@garden/types";
 import { Button, Card, cn, Input, Pill, SectionHeading } from "@garden/ui";
-import { ArrowRight, CalendarDays, Check, GripVertical, Plus, RotateCcw } from "lucide-react";
+import { ArrowRight, Check, Clock, GripVertical, Plus, RotateCcw } from "lucide-react";
 import { type DragEvent, type ReactNode, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { DayTimeline } from "../components/DayTimeline";
 import { SwipeableRow } from "../components/SwipeableRow";
 import { useLongPress } from "../components/useLongPress";
 
@@ -76,6 +87,9 @@ export const TodayPage = () => {
     );
 
   const defer = (taskId: string) => update((current) => deferTask(current, date, taskId));
+
+  const schedule = (taskId: string, startMinute: number | null) =>
+    update((current) => scheduleTask(current, date, taskId, startMinute));
 
   const submitEdit = (taskId: string, rawTitle: string) => {
     const title = rawTitle.trim();
@@ -160,6 +174,7 @@ export const TodayPage = () => {
                       onSubmitEdit={(title) => submitEdit(task.id, title)}
                       onToggle={() => toggleComplete(task.id)}
                       onDefer={() => defer(task.id)}
+                      onSchedule={(startMinute) => schedule(task.id, startMinute)}
                       onDragStart={() => setDragged(task.id)}
                       onDrop={() => reorder(task)}
                     />
@@ -182,22 +197,13 @@ export const TodayPage = () => {
           })}
         </div>
         <div className="space-y-5">
+          <DayTimeline tasks={plan.tasks} focusHours={plan.focusHours} onUnschedule={(taskId) => schedule(taskId, null)} />
           <Card className="hidden !border-sage/25 !bg-[#f1f2eb] p-6 shadow-none xl:block">
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-forest/70">Daily briefing</p>
             <p className="mt-4 font-serif text-2xl leading-8 tracking-tight text-ink">{briefing.summary}</p>
             <p className="mt-4 text-sm leading-6 text-muted">{briefing.recommendations[0]}</p>
             {briefing.warnings[0] ? <p className="mt-3 text-sm leading-6 text-clay">{briefing.warnings[0]}</p> : null}
             <div className="mt-6 border-t border-forest/10 pt-4 text-sm text-forest">{briefing.suggestedNextAction}</div>
-          </Card>
-          <Card className="p-5 sm:p-6">
-            <div className="flex items-start gap-3">
-              <CalendarDays className="mt-1 text-sage" size={19} />
-              <div>
-                <p className="text-sm text-muted">Calendar reality</p>
-                <p className="mt-2 text-lg font-medium tracking-tight">You realistically have</p>
-                <p className="font-serif text-[2.25rem] tracking-tight text-forest">{plan.focusHours} focused hours today.</p>
-              </div>
-            </div>
           </Card>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
             <SupportCard title="Train" href="/train">
@@ -247,6 +253,7 @@ const TaskRow = ({
   onSubmitEdit,
   onToggle,
   onDefer,
+  onSchedule,
   onDragStart,
   onDrop,
 }: {
@@ -258,11 +265,13 @@ const TaskRow = ({
   onSubmitEdit: (title: string) => void;
   onToggle: () => void;
   onDefer: () => void;
+  onSchedule: (startMinute: number | null) => void;
   onDragStart: () => void;
   onDrop: () => void;
 }) => {
   const completed = task.status === "completed";
   const longPress = useLongPress(onStartEdit);
+  const [picking, setPicking] = useState(false);
   return (
     <SwipeableRow completed={completed} onComplete={onToggle} onDefer={onDefer}>
       <div
@@ -310,6 +319,37 @@ const TaskRow = ({
           </button>
         )}
         {task.estimateMinutes ? <span className="hidden text-xs text-muted sm:inline">{task.estimateMinutes}m</span> : null}
+        {picking ? (
+          <input
+            type="time"
+            autoFocus
+            defaultValue={task.startMinute != null ? minuteToTimeValue(task.startMinute) : ""}
+            onChange={(event) => {
+              const minute = parseTimeValue(event.target.value);
+              if (minute != null) onSchedule(minute);
+            }}
+            onBlur={() => setPicking(false)}
+            className="h-8 rounded-lg border border-ink/8 bg-white px-2 text-xs text-ink outline-none focus:border-sage"
+          />
+        ) : task.startMinute != null ? (
+          <button
+            onClick={() => setPicking(true)}
+            title="Change time"
+            className="flex shrink-0 items-center gap-1 rounded-full bg-forest/8 px-2 py-1 text-[11px] font-medium text-forest transition hover:bg-forest/15"
+          >
+            <Clock size={12} />
+            {minuteLabel(task.startMinute)}
+          </button>
+        ) : (
+          <button
+            aria-label="Schedule a time"
+            title="Schedule a time"
+            onClick={() => setPicking(true)}
+            className="shrink-0 rounded-md p-1.5 text-muted/55 transition hover:bg-mist hover:text-ink sm:opacity-0 sm:group-hover:opacity-100"
+          >
+            <Clock size={15} />
+          </button>
+        )}
         <span className="hidden sm:block">
           <Button
             variant="quiet"
