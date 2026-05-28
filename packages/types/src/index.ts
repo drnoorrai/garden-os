@@ -240,6 +240,15 @@ export interface UserContext {
   proteinProgress: number;
   hydrationComplete: boolean;
   focusPreference: string;
+  /** Consecutive tended days, for streak-aware briefings. */
+  tendingStreak?: number;
+  /** Titles of active tasks carried over repeatedly, oldest weight first. */
+  neglectedTasks?: string[];
+  /** Title of today's active One Big Thing, if chosen. */
+  bigThing?: string;
+  /** Completed vs planned task counts for today. */
+  completedToday?: number;
+  plannedToday?: number;
 }
 
 export interface TrainTodaySummary {

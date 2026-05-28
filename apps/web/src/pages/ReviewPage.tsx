@@ -18,6 +18,10 @@ export const ReviewPage = () => {
   const [mood, setMood] = useState(existing?.mood ?? 3);
   const [moveUnfinished, setMoveUnfinished] = useState(true);
   const completedBigThing = bigThing?.status === "completed";
+  const completedCount = plan.tasks.filter((task) => task.status === "completed").length;
+  const carriedOver = plan.tasks
+    .filter((task) => task.status !== "completed" && (task.deferCount ?? 0) >= 2)
+    .sort((a, b) => (b.deferCount ?? 0) - (a.deferCount ?? 0));
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -26,6 +30,20 @@ export const ReviewPage = () => {
         <h1 className="mt-3 font-serif text-4xl tracking-[-0.045em] sm:text-5xl">Close today gently.</h1>
         <p className="mt-4 text-muted">Keep what you learned. Leave the rest here.</p>
       </header>
+      <Card className="mb-5 !bg-[#f1f2eb] !border-sage/25 p-5 shadow-none">
+        <p className="text-xs font-medium uppercase tracking-[0.18em] text-forest/70">Today in numbers</p>
+        <p className="mt-3 text-sm leading-6 text-ink">
+          You tended <span className="font-medium text-forest">{completedCount}</span> of {plan.tasks.length} planned, and the
+          One Big Thing is {completedBigThing ? "done" : "still open"}.
+        </p>
+        {carriedOver.length ? (
+          <p className="mt-2 text-sm leading-6 text-clay">
+            {carriedOver.length === 1
+              ? `"${carriedOver[0].title}" has been carried ${carriedOver[0].deferCount}× — worth a decision tonight.`
+              : `${carriedOver.length} tasks keep slipping (e.g. "${carriedOver[0].title}"). Consider dropping or scheduling one.`}
+          </p>
+        ) : null}
+      </Card>
       <Card className="p-6 sm:p-8">
         <form
           className="space-y-6"
