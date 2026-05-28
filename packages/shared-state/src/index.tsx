@@ -1,6 +1,6 @@
-import { createFreshData, createSeedData, getPlan, nextDayKey, todayKey } from "@garden/domain";
+import { createFreshData, createId, createSeedData, getPlan, nextDayKey, todayKey } from "@garden/domain";
 import { localStorageAdapter } from "@garden/storage";
-import type { DailyPlan, GardenData, UserContext } from "@garden/types";
+import type { DailyPlan, GardenData, UserContext, WorkItemKind } from "@garden/types";
 import { createContext, type PropsWithChildren, useContext, useEffect, useMemo, useState } from "react";
 
 const DEFAULT_STORAGE_KEY = "garden-os:v1:fresh";
@@ -62,6 +62,31 @@ export const changePlan = (data: GardenData, date: string, change: (plan: DailyP
   return { ...data, plans: existing ? data.plans.map((item) => item.date === date ? plan : item) : [...data.plans, plan] };
 };
 
+export const captureItem = (data: GardenData, title: string, kind: WorkItemKind = "thought"): GardenData => {
+  const trimmed = title.trim();
+  if (!trimmed) return data;
+  return {
+    ...data,
+    workItems: [
+      { id: createId(), createdAt: new Date().toISOString(), title: trimmed, kind, triage: "untriaged" },
+      ...data.workItems,
+    ],
+  };
+};
+
+export const scheduleTask = (
+  data: GardenData,
+  date: string,
+  taskId: string,
+  startMinute: number | null,
+): GardenData =>
+  changePlan(data, date, (plan) => ({
+    ...plan,
+    tasks: plan.tasks.map((task) =>
+      task.id === taskId ? { ...task, startMinute: startMinute ?? undefined } : task,
+    ),
+  }));
+
 export const deferTask = (data: GardenData, date: string, taskId: string): GardenData => {
   const item = getPlan(data, date).tasks.find((task) => task.id === taskId);
   if (!item) return data;
@@ -69,7 +94,19 @@ export const deferTask = (data: GardenData, date: string, taskId: string): Garde
   return changePlan(
     changePlan(data, date, (plan) => ({ ...plan, tasks: plan.tasks.filter((task) => task.id !== taskId) })),
     tomorrow,
-    (plan) => ({ ...plan, tasks: [...plan.tasks, { ...item, status: "active", scheduledDate: tomorrow, order: plan.tasks.filter((task) => task.tier === item.tier).length }] }),
+    (plan) => ({
+      ...plan,
+      tasks: [
+        ...plan.tasks,
+        {
+          ...item,
+          status: "active",
+          scheduledDate: tomorrow,
+          order: plan.tasks.filter((task) => task.tier === item.tier).length,
+          deferCount: (item.deferCount ?? 0) + 1,
+        },
+      ],
+    }),
   );
 };
 
