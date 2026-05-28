@@ -13,6 +13,35 @@ const formatDuration = (minutes: number) => {
   return mins === 0 ? `${hours}h` : `${hours}h ${mins}m`;
 };
 
+/** Assign overlapping blocks to side-by-side columns so a double-booked hour reads clearly. */
+const columnLayout = (placed: DailyTask[]) => {
+  const layout = new Map<string, { col: number; cols: number }>();
+  let i = 0;
+  while (i < placed.length) {
+    let end = (placed[i].startMinute ?? 0) + taskDuration(placed[i]);
+    let j = i;
+    while (j + 1 < placed.length && (placed[j + 1].startMinute ?? 0) < end) {
+      j += 1;
+      end = Math.max(end, (placed[j].startMinute ?? 0) + taskDuration(placed[j]));
+    }
+    const cluster = placed.slice(i, j + 1);
+    const laneEnds: number[] = [];
+    for (const task of cluster) {
+      const startMinute = task.startMinute ?? 0;
+      let lane = laneEnds.findIndex((laneEnd) => laneEnd <= startMinute);
+      if (lane === -1) {
+        lane = laneEnds.length;
+        laneEnds.push(0);
+      }
+      laneEnds[lane] = startMinute + taskDuration(task);
+      layout.set(task.id, { col: lane, cols: 0 });
+    }
+    for (const task of cluster) layout.set(task.id, { col: layout.get(task.id)!.col, cols: laneEnds.length });
+    i = j + 1;
+  }
+  return layout;
+};
+
 export const DayTimeline = ({
   tasks,
   focusHours,
@@ -23,6 +52,7 @@ export const DayTimeline = ({
   onUnschedule: (taskId: string) => void;
 }) => {
   const placed = scheduledTasks(tasks);
+  const layout = columnLayout(placed);
   const planned = plannedMinutes(tasks);
   const available = Math.round(focusHours * 60);
   const over = planned > available;
@@ -72,21 +102,31 @@ export const DayTimeline = ({
             const offsetMinutes = (task.startMinute ?? start) - start;
             const duration = taskDuration(task);
             const completed = task.status === "completed";
+            const height = Math.max(duration * PX_PER_MIN - 4, 24);
+            const { col, cols } = layout.get(task.id) ?? { col: 0, cols: 1 };
+            const showMeta = height >= 40;
             return (
               <div
                 key={task.id}
                 className={cn(
-                  "group absolute inset-x-0 flex items-start justify-between gap-2 overflow-hidden rounded-xl border px-3 py-1.5 text-left",
+                  "group absolute flex items-start justify-between gap-1 overflow-hidden rounded-xl border px-3 py-1.5 text-left",
                   task.tier === "big" ? "border-forest/20 bg-forest/10" : "border-ink/8 bg-mist",
                   completed && "opacity-55",
                 )}
-                style={{ top: offsetMinutes * PX_PER_MIN, height: Math.max(duration * PX_PER_MIN - 4, 26) }}
+                style={{
+                  top: offsetMinutes * PX_PER_MIN,
+                  height,
+                  left: `${(col / cols) * 100}%`,
+                  width: `calc(${100 / cols}% - 4px)`,
+                }}
               >
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className={cn("truncate text-sm font-medium text-ink", completed && "line-through")}>{task.title}</p>
-                  <p className="text-[11px] text-muted">
-                    {minuteLabel(task.startMinute ?? start)} · {formatDuration(duration)}
-                  </p>
+                  {showMeta ? (
+                    <p className="truncate text-[11px] text-muted">
+                      {minuteLabel(task.startMinute ?? start)} · {formatDuration(duration)}
+                    </p>
+                  ) : null}
                 </div>
                 <button
                   aria-label={`Unschedule ${task.title}`}
