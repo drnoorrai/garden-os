@@ -151,6 +151,7 @@ export const TodayPage = () => {
           <span className="text-sm font-medium text-forest">{plan.focusHours}h focus</span>
         </div>
         <p className="mt-3 font-serif text-xl leading-7 tracking-tight text-ink">{briefing.summary}</p>
+        {briefing.recommendations[0] ? <p className="mt-2 text-sm leading-6 text-muted">{briefing.recommendations[0]}</p> : null}
         {briefing.warnings[0] ? <p className="mt-2 text-sm leading-6 text-clay">{briefing.warnings[0]}</p> : null}
         <p className="mt-3 border-t border-forest/10 pt-3 text-sm text-forest">{briefing.suggestedNextAction}</p>
       </Card>
@@ -211,7 +212,9 @@ export const TodayPage = () => {
           <Card className="hidden !border-sage/25 !bg-[#f1f2eb] p-6 shadow-none xl:block">
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-forest/70">Daily briefing</p>
             <p className="mt-4 font-serif text-2xl leading-8 tracking-tight text-ink">{briefing.summary}</p>
-            <p className="mt-4 text-sm leading-6 text-muted">{briefing.recommendations[0]}</p>
+            {briefing.recommendations.slice(0, 2).map((line) => (
+              <p key={line} className="mt-4 text-sm leading-6 text-muted">{line}</p>
+            ))}
             {briefing.warnings[0] ? <p className="mt-3 text-sm leading-6 text-clay">{briefing.warnings[0]}</p> : null}
             <div className="mt-6 border-t border-forest/10 pt-4 text-sm text-forest">{briefing.suggestedNextAction}</div>
           </Card>

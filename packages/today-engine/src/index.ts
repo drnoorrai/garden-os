@@ -26,15 +26,34 @@ export const buildTodayIntelligence = ({ context, summaries }: TodayEngineInput)
     recommendations.push("Resolve one open decision rather than carrying it into more tasks.");
   }
 
+  // Name a specific task that keeps getting pushed, so the nudge feels earned.
+  const neglected = context.neglectedTasks ?? [];
+  let neglectNudge: string | undefined;
+  if (neglected.length === 1) {
+    neglectNudge = `"${neglected[0]}" has waited a few days — close it early to clear the weight.`;
+  } else if (neglected.length > 1) {
+    neglectNudge = `${neglected.length} tasks keep slipping (starting with "${neglected[0]}"). Clear one before adding new work.`;
+  }
+
   const constrained = overloaded || fatigued || lowEnergy;
-  const priority = work?.module === "work" ? work.priority : context.focusPreference;
+  const streak = context.tendingStreak ?? 0;
+  const priority = context.bigThing ?? (work?.module === "work" ? work.priority : context.focusPreference);
+  const baseRecommendation = constrained
+    ? "Keep one important outcome and defer optional work."
+    : "Use your clearest focus block on the priority that matters.";
+
+  let summary: string;
+  if (constrained) summary = "Reduce load. Protect one meaningful deliverable.";
+  else if (streak >= 2) summary = `Day ${streak} of tending. Keep the thread with one clear win.`;
+  else summary = "Your domains support a focused day.";
+
   return {
     context,
-    summary: constrained ? "Reduce load. Protect one meaningful deliverable." : "Your domains support a focused day.",
-    recommendations: [
-      constrained ? "Keep one important outcome and defer optional work." : "Use your clearest focus block on the priority that matters.",
-      ...recommendations,
-    ],
+    summary,
+    // Lead with the most specific, earned guidance when a task keeps slipping.
+    recommendations: [neglectNudge, baseRecommendation, ...recommendations].filter(
+      (line): line is string => Boolean(line),
+    ),
     warnings,
     suggestedNextAction: `Begin with: ${priority}.`,
     suggestedFocus: priority,

@@ -116,6 +116,31 @@ export const tendingStreak = (data: GardenData, today = todayKey()): number => {
   return streak;
 };
 
+/** How many of the last `days` days (ending today) were tended. */
+export const tendedDaysCount = (data: GardenData, days = 7, today = todayKey()): number => {
+  let count = 0;
+  let cursor = today;
+  for (let i = 0; i < days; i += 1) {
+    if (wasTended(data, cursor)) count += 1;
+    cursor = prevDayKey(cursor);
+  }
+  return count;
+};
+
+/** Tasks carried over repeatedly across the week, surfaced as recurring blockers. */
+export const recurringBlockers = (data: GardenData, minCarries = 2): { title: string; carries: number }[] => {
+  const carries = new Map<string, number>();
+  for (const plan of data.plans) {
+    for (const task of plan.tasks) {
+      const count = task.deferCount ?? 0;
+      if (count >= minCarries) carries.set(task.title, Math.max(carries.get(task.title) ?? 0, count));
+    }
+  }
+  return [...carries.entries()]
+    .map(([title, count]) => ({ title, carries: count }))
+    .sort((a, b) => b.carries - a.carries);
+};
+
 export const categorizeBet = (bet: Bet) => {
   if (bet.impact >= 3 && bet.effort <= 2) return "Quick Wins";
   if (bet.impact >= 3 && bet.effort >= 3) return "Major Projects";

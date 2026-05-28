@@ -1,4 +1,4 @@
-import { createId, createSeedData, getPlan, nextDayKey, todayKey } from "@garden/domain";
+import { createId, createSeedData, getPlan, nextDayKey, tendingStreak, todayKey } from "@garden/domain";
 import { localStorageAdapter } from "@garden/storage";
 import type { DailyPlan, GardenData, UserContext, WorkItemKind } from "@garden/types";
 import { createContext, type PropsWithChildren, useContext, useEffect, useMemo, useState } from "react";
@@ -39,6 +39,11 @@ export const deriveUserContext = (data: GardenData, date = todayKey()): UserCont
   const activeWork = data.kanbanCards.filter((card) => card.column === "today" || card.column === "blocked").length;
   const hardSets = data.train.sets.filter((set) => set.rir <= 4).length;
   const protein = data.meals.filter((meal) => meal.date === date).reduce((sum, meal) => sum + meal.proteinGrams, 0);
+  const neglectedTasks = plan.tasks
+    .filter((task) => task.status !== "completed" && (task.deferCount ?? 0) >= 2)
+    .sort((a, b) => (b.deferCount ?? 0) - (a.deferCount ?? 0))
+    .map((task) => task.title);
+  const bigThing = plan.tasks.find((task) => task.tier === "big" && task.status !== "completed")?.title;
   return {
     goals: [data.profile.focusTheme, data.projects[0]?.outcome ?? "Protect meaningful attention."],
     energy: latestReview?.energy ?? plan.energy,
@@ -49,6 +54,11 @@ export const deriveUserContext = (data: GardenData, date = todayKey()): UserCont
     proteinProgress: Math.min(protein / data.profile.proteinTarget, 1),
     hydrationComplete: plan.hydrationComplete,
     focusPreference: plan.activeClarityGoal,
+    tendingStreak: tendingStreak(data, date),
+    neglectedTasks,
+    bigThing,
+    completedToday: plan.tasks.filter((task) => task.status === "completed").length,
+    plannedToday: plan.tasks.length,
   };
 };
 
