@@ -74,15 +74,14 @@ The current AI layer is deterministic by design. It produces summaries, recommen
 | `/work` | Work overview |
 | `/work/inbox` | GTD capture and triage |
 | `/work/prioritize` | Rai Bets-style prioritization |
-| `/work/execute` | Task Garden-style Kanban execution |
+| `/work/execute` | Task Garden-style Kanban execution, with weekly focus and capacity |
 | `/work/projects` | MoSCoW project scope |
-| `/work/sprint` | Weekly focus and capacity |
 | `/eat`, `/eat/plan`, `/eat/groceries` | Nutrition support |
 | `/review` | Evening review |
 | `/weekly-review` | Weekly reflection summary |
 | `/settings` | Local profile preferences and demo reset |
 
-Legacy V1 work routes `/work/bets` and `/work/kanban` redirect to `/work/prioritize` and `/work/execute`.
+Legacy work routes `/work/bets`, `/work/kanban` and `/work/sprint` redirect to `/work/prioritize` and `/work/execute` (weekly focus and capacity now live within Execute).
 
 ## Development
 
