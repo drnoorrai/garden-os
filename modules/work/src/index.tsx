@@ -2,7 +2,7 @@ import { ModuleHeader, ModuleTabs, StatCard } from "@garden/design-system";
 import { createId, todayKey } from "@garden/domain";
 import { useGarden } from "@garden/shared-state";
 import type { Bet, BetConviction, BetStage, KanbanColumn, MoscowPriority, TriageAction, WorkItemKind } from "@garden/types";
-import { Button, Card, cn, Input, Label, Pill, SectionHeading, Textarea } from "@garden/ui";
+import { Button, Card, Input, Label, Pill, SectionHeading, Textarea } from "@garden/ui";
 import { GripVertical, Plus } from "lucide-react";
 import { useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
@@ -135,30 +135,8 @@ const Execute = () => {
   const { data, update } = useGarden();
   const [title, setTitle] = useState("");
   const [dragging, setDragging] = useState<string | null>(null);
-  const sprint = data.sprints[0];
-  const active = data.kanbanCards.filter((card) => card.column === "sprint" || card.column === "today").length;
-  const overloaded = sprint ? active > sprint.capacity : false;
   return (
     <div className="space-y-5">
-      {sprint ? (
-        <Card className="p-6">
-          <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-[0.15em] text-muted">Weekly focus · week of {sprint.weekOf}</p>
-              <p className="mt-2 font-serif text-3xl tracking-tight">{sprint.focus}</p>
-              {sprint.commitments.length ? (
-                <div className="mt-4 flex flex-wrap gap-2">{sprint.commitments.map((commitment) => <span key={commitment} className="rounded-full bg-mist px-3 py-1 text-sm text-muted">{commitment}</span>)}</div>
-              ) : null}
-            </div>
-            <div className="shrink-0 md:text-right">
-              <p className="text-sm text-muted">Capacity</p>
-              <p className={cn("font-serif text-4xl", overloaded ? "text-clay" : "text-forest")}>{active} / {sprint.capacity}</p>
-              <Button variant="quiet" className="mt-1 h-8 min-h-8 px-2 text-xs" onClick={() => update((current) => ({ ...current, sprints: current.sprints.map((entry) => entry.id === sprint.id ? { ...entry, capacity: entry.capacity + 1 } : entry) }))}>Adjust capacity</Button>
-            </div>
-          </div>
-          <p className={cn("mt-4 border-t border-ink/6 pt-4 text-sm", overloaded ? "text-clay" : "text-muted")}>{overloaded ? "Overloaded. Reduce active work before adding more." : "Capacity is protected."}</p>
-        </Card>
-      ) : null}
       <Card className="p-5"><SectionHeading title="Task Garden execution" supporting="Only prioritized work should enter the board." /><form className="flex gap-2" onSubmit={(event) => { event.preventDefault(); if (!title.trim()) return; update((current) => ({ ...current, kanbanCards: [...current.kanbanCards, { id: createId(), title: title.trim(), column: "backlog" }] })); setTitle(""); }}><Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Add an executable next action" /><Button type="submit">Add</Button></form></Card>
       <div className="grid gap-3 md:grid-cols-5">{columns.map((column) => (
         <Card key={column.id} className="min-h-64 p-3" onDragOver={(event) => event.preventDefault()} onDrop={() => { if (!dragging) return; update((current) => ({ ...current, kanbanCards: current.kanbanCards.map((card) => card.id === dragging ? { ...card, column: column.id } : card) })); setDragging(null); }}>
