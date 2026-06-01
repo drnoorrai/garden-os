@@ -329,6 +329,10 @@ importers:
         version: 5.9.3
 
   packages/storage:
+    dependencies:
+      '@supabase/supabase-js':
+        specifier: ^2.106.2
+        version: 2.106.2
     devDependencies:
       typescript:
         specifier: ^5.8.3

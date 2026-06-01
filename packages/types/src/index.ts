@@ -1,7 +1,9 @@
 export type TaskTier = "big" | "medium" | "small";
 export type TaskStatus = "active" | "completed" | "deferred";
-export type WorkItemKind = "task" | "idea" | "thought" | "obligation";
+export type WorkItemKind = "task" | "idea" | "thought" | "obligation" | "content";
 export type TriageAction = "untriaged" | "do-now" | "defer" | "delegate" | "delete";
+export type ContentStage = "seed" | "angle" | "outline" | "draft" | "published";
+export type ContentFormat = "post" | "essay" | "thread" | "video" | "newsletter";
 export type BetStatus = "considering" | "active" | "complete" | "parked";
 export type BetStage = "triage" | "exploring" | "committed" | "in-flight" | "shipped" | "archive";
 export type BetConviction = "high" | "medium" | "speculative";
@@ -78,6 +80,10 @@ export interface WorkItem {
   title: string;
   kind: WorkItemKind;
   triage: TriageAction;
+  contentStage?: ContentStage;
+  contentFormat?: ContentFormat;
+  audience?: string;
+  hook?: string;
 }
 
 export interface Bet {
