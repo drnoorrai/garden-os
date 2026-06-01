@@ -1,7 +1,7 @@
 import { ModuleHeader, ModuleTabs, StatCard } from "@garden/design-system";
 import { createId, todayKey } from "@garden/domain";
 import { useGarden } from "@garden/shared-state";
-import type { Bet, BetConviction, BetStage, KanbanColumn, MoscowPriority, TriageAction, WorkItemKind } from "@garden/types";
+import type { Bet, BetConviction, BetStage, ContentFormat, ContentStage, KanbanColumn, MoscowPriority, TriageAction, WorkItemKind } from "@garden/types";
 import { Button, Card, Input, Label, Pill, SectionHeading, Textarea } from "@garden/ui";
 import { GripVertical, Plus } from "lucide-react";
 import { useState } from "react";
@@ -13,6 +13,7 @@ export { getTodaySummary } from "./lib";
 const tabs = [
   { to: "/work", label: "Overview", end: true },
   { to: "/work/inbox", label: "Inbox" },
+  { to: "/work/content", label: "Content" },
   { to: "/work/prioritize", label: "Prioritize" },
   { to: "/work/execute", label: "Execute" },
   { to: "/work/projects", label: "Projects" },
@@ -29,6 +30,7 @@ export const WorkRoutes = () => {
       <Routes>
         <Route index element={<Overview />} />
         <Route path="inbox" element={<InboxPanel />} />
+        <Route path="content" element={<ContentStudio />} />
         <Route path="prioritize" element={<Prioritize />} />
         <Route path="bets" element={<Navigate replace to="/work/prioritize" />} />
         <Route path="execute" element={<Execute />} />
@@ -77,11 +79,24 @@ const InboxPanel = () => {
         <form className="space-y-4" onSubmit={(event) => {
           event.preventDefault();
           if (!title.trim()) return;
-          update((current) => ({ ...current, workItems: [{ id: createId(), createdAt: todayKey(), title: title.trim(), kind, triage: "untriaged" }, ...current.workItems] }));
+          update((current) => ({
+            ...current,
+            workItems: [
+              {
+                id: createId(),
+                createdAt: todayKey(),
+                title: title.trim(),
+                kind,
+                triage: "untriaged",
+                ...(kind === "content" ? { contentStage: "seed" as const, contentFormat: "post" as const } : {}),
+              },
+              ...current.workItems,
+            ],
+          }));
           setTitle("");
         }}>
           <div><Label htmlFor="capture">What has your attention?</Label><Textarea id="capture" rows={4} value={title} onChange={(event) => setTitle(event.target.value)} /></div>
-          <select value={kind} onChange={(event) => setKind(event.target.value as WorkItemKind)} className="h-11 w-full rounded-xl border border-ink/8 bg-white px-3 text-sm"><option value="task">Task</option><option value="idea">Idea</option><option value="thought">Thought</option><option value="obligation">Obligation</option></select>
+          <select value={kind} onChange={(event) => setKind(event.target.value as WorkItemKind)} className="h-11 w-full rounded-xl border border-ink/8 bg-white px-3 text-sm"><option value="task">Task</option><option value="idea">Idea</option><option value="thought">Thought</option><option value="obligation">Obligation</option><option value="content">Content</option></select>
           <Button type="submit" className="w-full">Capture</Button>
         </form>
         <p className="mt-5 rounded-xl bg-mist/55 p-4 text-sm text-muted">If it takes less than 2 minutes, do it now.</p>
@@ -95,6 +110,118 @@ const InboxPanel = () => {
           </div>
         ))}</div>
       </Card>
+    </div>
+  );
+};
+
+const contentStages: Array<{ id: ContentStage; label: string; guidance: string }> = [
+  { id: "seed", label: "Seed", guidance: "Raw observation or thesis." },
+  { id: "angle", label: "Angle", guidance: "Who is it for and why now?" },
+  { id: "outline", label: "Outline", guidance: "Shape the argument." },
+  { id: "draft", label: "Draft", guidance: "Ready to write or record." },
+  { id: "published", label: "Published", guidance: "Shipped or archived." },
+];
+
+const contentFormats: ContentFormat[] = ["post", "essay", "thread", "video", "newsletter"];
+
+const ContentStudio = () => {
+  const { data, update } = useGarden();
+  const [draft, setDraft] = useState("");
+  const [audience, setAudience] = useState("Healthtech founders");
+  const [format, setFormat] = useState<ContentFormat>("post");
+  const contentItems = data.workItems.filter((item) => item.kind === "content" && item.triage !== "delete");
+
+  const updateContent = (id: string, change: Partial<(typeof contentItems)[number]>) =>
+    update((current) => ({
+      ...current,
+      workItems: current.workItems.map((item) => item.id === id ? { ...item, ...change } : item),
+    }));
+
+  return (
+    <div className="space-y-6">
+      <Card className="p-6">
+        <SectionHeading
+          title="Content idea development"
+          supporting="Turn captured thoughts into useful founder content without mixing them into execution work."
+        />
+        <form
+          className="grid gap-3 lg:grid-cols-[1fr_220px_160px_auto]"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!draft.trim()) return;
+            update((current) => ({
+              ...current,
+              workItems: [
+                {
+                  id: createId(),
+                  createdAt: todayKey(),
+                  title: draft.trim(),
+                  kind: "content",
+                  triage: "untriaged",
+                  contentStage: "seed",
+                  contentFormat: format,
+                  audience: audience.trim() || undefined,
+                },
+                ...current.workItems,
+              ],
+            }));
+            setDraft("");
+          }}
+        >
+          <Input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="A content idea, thesis or observation" />
+          <Input value={audience} onChange={(event) => setAudience(event.target.value)} placeholder="Audience" />
+          <select value={format} onChange={(event) => setFormat(event.target.value as ContentFormat)} className="h-11 rounded-xl border border-ink/8 bg-white px-3 text-sm">
+            {contentFormats.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+          <Button type="submit"><Plus size={15} /> Add</Button>
+        </form>
+      </Card>
+
+      <div className="grid gap-4 xl:grid-cols-5">
+        {contentStages.map((stage) => {
+          const items = contentItems.filter((item) => (item.contentStage ?? "seed") === stage.id);
+          return (
+            <Card key={stage.id} className="min-h-64 p-4">
+              <div className="mb-4">
+                <Pill tone={stage.id === "published" ? "sage" : "stone"}>{stage.label}</Pill>
+                <p className="mt-3 text-xs leading-5 text-muted">{stage.guidance}</p>
+              </div>
+              <div className="space-y-3">
+                {items.map((item) => {
+                  const stageIndex = contentStages.findIndex((entry) => entry.id === (item.contentStage ?? "seed"));
+                  const nextStage = contentStages[Math.min(stageIndex + 1, contentStages.length - 1)]?.id ?? "published";
+                  return (
+                    <div key={item.id} className="rounded-2xl bg-mist/45 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-sm font-medium leading-6">{item.title}</p>
+                        <Pill>{item.contentFormat ?? "post"}</Pill>
+                      </div>
+                      <p className="mt-2 text-xs text-muted">{item.audience ?? "Audience not named"}</p>
+                      <Textarea
+                        className="mt-3 min-h-20 bg-white/75"
+                        value={item.hook ?? ""}
+                        onChange={(event) => updateContent(item.id, { hook: event.target.value })}
+                        placeholder="Hook, angle or outline notes..."
+                      />
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {stage.id !== "published" ? (
+                          <Button variant="secondary" className="h-8 min-h-8 px-3 text-xs" onClick={() => updateContent(item.id, { contentStage: nextStage })}>
+                            Move to {contentStages.find((entry) => entry.id === nextStage)?.label}
+                          </Button>
+                        ) : null}
+                        <Button variant="quiet" className="h-8 min-h-8 px-3 text-xs" onClick={() => updateContent(item.id, { triage: "delete" })}>
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+                {items.length === 0 ? <p className="rounded-xl border border-dashed border-ink/10 p-4 text-sm leading-6 text-muted">No ideas here yet.</p> : null}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 };

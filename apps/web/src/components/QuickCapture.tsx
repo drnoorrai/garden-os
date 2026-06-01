@@ -8,6 +8,7 @@ const kinds: { id: WorkItemKind; label: string }[] = [
   { id: "thought", label: "Thought" },
   { id: "task", label: "Task" },
   { id: "idea", label: "Idea" },
+  { id: "content", label: "Content" },
 ];
 
 export const QuickCapture = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
@@ -94,7 +95,9 @@ export const QuickCapture = ({ open, onClose }: { open: boolean; onClose: () => 
             {capturedCount} sent to Work inbox · keep typing or press Esc
           </p>
         ) : (
-          <p className="mt-4 text-sm text-muted">Lands in your Work inbox to triage later.</p>
+          <p className="mt-4 text-sm text-muted">
+            {kind === "content" ? "Content ideas also appear in Work → Content." : "Lands in your Work inbox to triage later."}
+          </p>
         )}
       </div>
     </div>

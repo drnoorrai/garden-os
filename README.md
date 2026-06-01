@@ -12,6 +12,7 @@ The product goal is simple: opening the app should make life feel organized.
 - `/` is a public, example-filled landing page showing how a healthtech founder might use Garden OS.
 - New private workspaces start fresh after login, with example content kept out of account data.
 - First-run onboarding explains Today, the modules and the evening review loop before opening the workspace.
+- Quick Capture includes a `Content` category that feeds a dedicated `/work/content` development lane.
 - `Train` brings the core Tension experience into Garden OS: workout templates, session flow, movement system, hard-set volume, phase-aware targets and history.
 - `Think` combines Clarity, Field Notes, Journal, Decisions and Mental Models into one private thinking system.
 - `Work` unifies GTD capture, Rai Bets prioritization, Task Garden execution, MoSCoW project scope and weekly sprint focus.
@@ -31,7 +32,7 @@ packages/
   design-system/    Shared module headers, tabs and stats
   domain/           Seed data and daily planning rules
   shared-state/     GardenProvider, UserContext and V1-to-V2 migration
-  storage/          Local storage adapter and Supabase placeholder
+  storage/          Local storage adapter and Supabase sync adapter
   today-engine/     Cross-module Today intelligence
   types/            Shared product contracts
   ui/               Small shadcn-style primitive component set
@@ -73,6 +74,7 @@ The current AI layer is deterministic by design. It produces summaries, recommen
 | `/think/models` | Mental models |
 | `/work` | Work overview |
 | `/work/inbox` | GTD capture and triage |
+| `/work/content` | Content idea development |
 | `/work/prioritize` | Rai Bets-style prioritization |
 | `/work/execute` | Task Garden-style Kanban execution |
 | `/work/projects` | MoSCoW project scope |
@@ -93,7 +95,7 @@ pnpm install
 pnpm dev
 ```
 
-Vite serves the app locally and redirects `/` to `/today`.
+Vite serves the app locally. `/` is the public landing page and private users land on `/today` after onboarding.
 
 Validation:
 
@@ -105,9 +107,9 @@ pnpm build
 
 ## Storage
 
-Garden OS is local-first. Public examples live on the landing page, while private user workspaces use fresh local data keyed by account when authentication is configured.
+Garden OS is local-first. Public examples live on the landing page, while private user workspaces use fresh local data keyed by account when authentication is not configured.
 
-`@garden/storage` includes a typed `supabaseAdapter` placeholder for future sync, but V2 does not require accounts, a backend or environment variables.
+When `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are present, signed-in users sync through `public.garden_data`. Local data is still cached so the app remains resilient, and first sign-in migrates an existing local Garden into the user's private Supabase row if one exists.
 
 ## Authentication
 
@@ -121,6 +123,7 @@ In Supabase, configure:
 - Google provider enabled with a Google OAuth Client ID and Client Secret.
 - Site URL: `https://garden-os.pages.dev`
 - Redirect URLs: `https://garden-os.pages.dev/**` and `http://localhost:5173/**`
+- Apply the migration in `supabase/migrations` to create `public.garden_data` with RLS and authenticated-only row access.
 
 ## Configuration
 

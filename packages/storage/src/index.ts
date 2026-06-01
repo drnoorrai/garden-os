@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 export interface StorageAdapter<T> {
   load(): Promise<T | null>;
   save(value: T): Promise<void>;
@@ -18,18 +20,29 @@ export const localStorageAdapter = <T>(key: string): StorageAdapter<T> => ({
 });
 
 export interface SupabaseAdapterConfig {
-  url: string;
-  anonKey: string;
+  client: SupabaseClient;
+  userId: string;
+  table?: string;
 }
 
-export const supabaseAdapter = <T>(_config: SupabaseAdapterConfig): StorageAdapter<T> => ({
+export const supabaseAdapter = <T>({ client, userId, table = "garden_data" }: SupabaseAdapterConfig): StorageAdapter<T> => ({
   async load() {
-    throw new Error("Supabase synchronization is reserved for a later release.");
+    const { data, error } = await client
+      .from(table)
+      .select("data")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (error) throw error;
+    return data?.data ? (data.data as T) : null;
   },
-  async save(_value) {
-    throw new Error("Supabase synchronization is reserved for a later release.");
+  async save(value) {
+    const { error } = await client
+      .from(table)
+      .upsert({ user_id: userId, data: value, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+    if (error) throw error;
   },
   async clear() {
-    throw new Error("Supabase synchronization is reserved for a later release.");
+    const { error } = await client.from(table).delete().eq("user_id", userId);
+    if (error) throw error;
   },
 });

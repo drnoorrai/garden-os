@@ -1,4 +1,5 @@
 import { useAuth } from "@garden/auth";
+import { useGarden } from "@garden/shared-state";
 import { Button, cn } from "@garden/ui";
 import { BookOpen, Dumbbell, House, Leaf, LogOut, Plus, Settings, SquareCheckBig, UtensilsCrossed } from "lucide-react";
 import { type PropsWithChildren, useEffect, useState } from "react";
@@ -16,7 +17,19 @@ const primary = [
 export const AppShell = ({ children }: PropsWithChildren) => {
   const navigate = useNavigate();
   const auth = useAuth();
+  const { syncError, syncStatus } = useGarden();
   const accountLabel = auth.user?.email ?? (auth.enabled ? "Signed in" : "Local mode");
+  const syncLabel = auth.enabled && auth.user
+    ? syncStatus === "synced"
+      ? "Synced across devices"
+      : syncStatus === "syncing"
+        ? "Syncing Garden data..."
+        : syncStatus === "error"
+          ? "Sync needs setup"
+          : "Local cache active"
+    : auth.enabled
+      ? "Sign in to sync"
+      : "Local-only workspace";
   const [captureOpen, setCaptureOpen] = useState(false);
 
   useEffect(() => {
@@ -74,7 +87,7 @@ export const AppShell = ({ children }: PropsWithChildren) => {
         <div className="mt-auto space-y-3">
           <div className="rounded-2xl bg-white/70 p-3 text-xs text-muted">
             <p className="font-medium text-ink">{accountLabel}</p>
-            <p className="mt-1">{auth.enabled ? "Supabase session active" : "Auth not configured"}</p>
+            <p className="mt-1" title={syncError ?? undefined}>{syncLabel}</p>
           </div>
           <Button onClick={() => navigate("/review")} className="w-full !bg-clay hover:!bg-clay/90">
             Evening review

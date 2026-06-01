@@ -1,5 +1,5 @@
 import { createFreshData, createId, createSeedData, getPlan, nextDayKey, todayKey } from "@garden/domain";
-import { localStorageAdapter } from "@garden/storage";
+import { localStorageAdapter, type StorageAdapter } from "@garden/storage";
 import type { DailyPlan, GardenData, UserContext, WorkItemKind } from "@garden/types";
 import { createContext, type PropsWithChildren, useContext, useEffect, useMemo, useState } from "react";
 
@@ -11,6 +11,8 @@ export interface GardenContextValue {
   update: (recipe: (current: GardenData) => GardenData) => void;
   reset: () => Promise<void>;
   ready: boolean;
+  syncStatus: "local" | "syncing" | "synced" | "error";
+  syncError: string | null;
 }
 
 const GardenContext = createContext<GardenContextValue | null>(null);
@@ -68,7 +70,14 @@ export const captureItem = (data: GardenData, title: string, kind: WorkItemKind 
   return {
     ...data,
     workItems: [
-      { id: createId(), createdAt: new Date().toISOString(), title: trimmed, kind, triage: "untriaged" },
+      {
+        id: createId(),
+        createdAt: new Date().toISOString(),
+        title: trimmed,
+        kind,
+        triage: "untriaged",
+        ...(kind === "content" ? { contentStage: "seed" as const, contentFormat: "post" as const } : {}),
+      },
       ...data.workItems,
     ],
   };
@@ -114,29 +123,102 @@ export const GardenProvider = ({
   children,
   seedMode = "fresh",
   storageKey = DEFAULT_STORAGE_KEY,
-}: PropsWithChildren<{ seedMode?: GardenSeedMode; storageKey?: string }>) => {
+  remoteAdapter,
+  fallbackStorageKeys = [],
+}: PropsWithChildren<{
+  seedMode?: GardenSeedMode;
+  storageKey?: string;
+  remoteAdapter?: StorageAdapter<Partial<GardenData>> | null;
+  fallbackStorageKeys?: string[];
+}>) => {
   const adapter = useMemo(() => localStorageAdapter<Partial<GardenData>>(storageKey), [storageKey]);
+  const fallbackKeySignature = fallbackStorageKeys.join("|");
+  const fallbackAdapters = useMemo(
+    () => fallbackStorageKeys.map((key) => localStorageAdapter<Partial<GardenData>>(key)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [fallbackKeySignature],
+  );
   const [data, setData] = useState<GardenData>(() => createInitialData(seedMode));
   const [ready, setReady] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<GardenContextValue["syncStatus"]>(remoteAdapter ? "syncing" : "local");
+  const [syncError, setSyncError] = useState<string | null>(null);
+
   useEffect(() => {
     let mounted = true;
     setReady(false);
+    setSyncStatus(remoteAdapter ? "syncing" : "local");
+    setSyncError(null);
     setData(createInitialData(seedMode));
-    void adapter.load().then((saved) => {
+    void (async () => {
+      const [primaryLocal, ...fallbackLocal] = await Promise.all([
+        adapter.load(),
+        ...fallbackAdapters.map((fallback) => fallback.load()),
+      ]);
+      const localSaved = primaryLocal ?? fallbackLocal.find(Boolean) ?? null;
+      if (remoteAdapter) {
+        try {
+          const remoteSaved = await remoteAdapter.load();
+          if (!mounted) return;
+          if (remoteSaved) {
+            setData(migrateGardenData(remoteSaved));
+            setSyncStatus("synced");
+          } else if (localSaved) {
+            const migrated = migrateGardenData(localSaved);
+            setData(migrated);
+            await remoteAdapter.save(migrated);
+            setSyncStatus("synced");
+          } else {
+            setData(createInitialData(seedMode));
+            setSyncStatus("synced");
+          }
+          setReady(true);
+          return;
+        } catch (error) {
+          if (!mounted) return;
+          setSyncStatus("error");
+          setSyncError(error instanceof Error ? error.message : "Could not sync with Supabase.");
+        }
+      }
       if (!mounted) return;
-      setData(saved ? migrateGardenData(saved) : createInitialData(seedMode));
+      setData(localSaved ? migrateGardenData(localSaved) : createInitialData(seedMode));
       setReady(true);
-    });
+    })();
     return () => {
       mounted = false;
     };
-  }, [adapter, seedMode]);
-  useEffect(() => { if (ready) void adapter.save(data); }, [adapter, data, ready]);
+  }, [adapter, fallbackAdapters, remoteAdapter, seedMode]);
+
+  useEffect(() => {
+    if (!ready) return;
+    void adapter.save(data);
+    if (!remoteAdapter) return;
+    let mounted = true;
+    setSyncStatus("syncing");
+    void remoteAdapter.save(data)
+      .then(() => {
+        if (!mounted) return;
+        setSyncStatus("synced");
+        setSyncError(null);
+      })
+      .catch((error) => {
+        if (!mounted) return;
+        setSyncStatus("error");
+        setSyncError(error instanceof Error ? error.message : "Could not sync with Supabase.");
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [adapter, data, ready, remoteAdapter]);
+
   const userContext = useMemo(() => deriveUserContext(data), [data]);
   const value = useMemo<GardenContextValue>(() => ({
-    data, userContext, ready, update: (recipe) => setData((current) => recipe(current)),
-    reset: async () => { await adapter.clear(); setData(createInitialData(seedMode)); },
-  }), [adapter, data, ready, seedMode, userContext]);
+    data, userContext, ready, syncStatus, syncError, update: (recipe) => setData((current) => recipe(current)),
+    reset: async () => {
+      await adapter.clear();
+      if (remoteAdapter) await remoteAdapter.clear();
+      setData(createInitialData(seedMode));
+    },
+  }), [adapter, data, ready, remoteAdapter, seedMode, syncError, syncStatus, userContext]);
   return <GardenContext.Provider value={value}>{children}</GardenContext.Provider>;
 };
 

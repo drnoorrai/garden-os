@@ -10,6 +10,7 @@ export interface AuthConfig {
 }
 
 export interface AuthContextValue {
+  client: SupabaseClient | null;
   enabled: boolean;
   ready: boolean;
   user: User | null;
@@ -57,6 +58,7 @@ export const AuthProvider = ({ children, config }: PropsWithChildren<{ config: A
   }, [client]);
 
   const value = useMemo<AuthContextValue>(() => ({
+    client,
     enabled: Boolean(client),
     ready,
     session,
@@ -144,11 +146,11 @@ export const LoginPage = () => {
         <div className="mb-8 flex items-center justify-between gap-4">
           <div>
             <p className="font-serif text-4xl tracking-tight">Garden OS</p>
-            <p className="mt-2 text-sm text-muted">Sign in to start with a clean Garden.</p>
+            <p className="mt-2 text-sm text-muted">Sign in to sync your Garden across devices.</p>
           </div>
           <Pill>private beta</Pill>
         </div>
-        <SectionHeading title="Welcome back" supporting="Use a magic link or continue with Google. Your private workspace starts fresh." />
+        <SectionHeading title="Welcome back" supporting="Use a magic link or continue with Google. New accounts start with a clean private workspace." />
         <form className="space-y-4" onSubmit={submitEmail}>
           <div>
             <Label htmlFor="email">Email</Label>
@@ -182,7 +184,7 @@ export const LoginPage = () => {
         ) : null}
         {error ? <p className="mt-5 rounded-2xl bg-clay/12 p-4 text-sm leading-6 text-clay">{error}</p> : null}
         <p className="mt-7 text-xs leading-5 text-muted">
-          Authentication is handled by Supabase Auth. Your Garden OS data remains local-first until sync is explicitly added.
+          Authentication is handled by Supabase Auth. Signed-in workspaces sync through your private Garden data row when Supabase is configured.
         </p>
       </Card>
     </main>
