@@ -21,6 +21,8 @@ export const AppShell = ({ children }: PropsWithChildren) => {
   const activeMembers = activeWorkspace.memberIds
     .map((memberId) => data.members.find((member) => member.id === memberId))
     .filter(Boolean);
+  const partnerNames = activeMembers.map((member) => member?.name).join(" + ");
+  const partnerEmails = activeMembers.map((member) => member?.email).filter(Boolean).join(", ");
   const syncLabel = auth.enabled && auth.user
     ? syncStatus === "synced"
       ? "Synced across devices"
@@ -104,13 +106,13 @@ export const AppShell = ({ children }: PropsWithChildren) => {
           </select>
           <p className="mt-2 text-xs leading-5 text-muted">
             {activeWorkspace.kind === "shared"
-              ? `Shared with ${activeMembers.map((member) => member?.name).join(" + ")}.`
+              ? `Shared with ${partnerNames}.`
               : "Private captures stay in your Garden."}
           </p>
           {activeWorkspace.kind === "shared" ? (
-            <button className="mt-3 w-full rounded-2xl bg-forest/8 px-3 py-2 text-left text-xs font-medium text-forest">
-              Invite Sonum account linking is coming. This mock shows the shared Garden now.
-            </button>
+            <p className="mt-3 rounded-2xl bg-forest/8 px-3 py-2 text-xs font-medium leading-5 text-forest">
+              Shared sync is active{partnerEmails ? ` for ${partnerEmails}` : ""}.
+            </p>
           ) : null}
         </section>
         <div className="mt-auto space-y-3">

@@ -1,7 +1,6 @@
 import { useAuth } from "@garden/auth";
 import { GardenProvider } from "@garden/shared-state";
-import { supabaseAdapter } from "@garden/storage";
-import type { GardenData } from "@garden/types";
+import { supabaseSharedGardenAdapter } from "@garden/storage";
 import { useMemo } from "react";
 import { App } from "./App";
 
@@ -9,7 +8,7 @@ export const GardenRoot = () => {
   const auth = useAuth();
   const remoteAdapter = useMemo(
     () => auth.client && auth.user
-      ? supabaseAdapter<Partial<GardenData>>({ client: auth.client, userId: auth.user.id })
+      ? supabaseSharedGardenAdapter({ client: auth.client, userId: auth.user.id })
       : null,
     [auth.client, auth.user],
   );

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { GardenData } from "@garden/types";
 
 export interface StorageAdapter<T> {
   load(): Promise<T | null>;
@@ -46,3 +47,138 @@ export const supabaseAdapter = <T>({ client, userId, table = "garden_data" }: Su
     if (error) throw error;
   },
 });
+
+interface SharedGardenMembershipRow {
+  workspace_id: string;
+  role: "owner" | "partner";
+}
+
+interface SharedGardenDataRow {
+  workspace_id: string;
+  data: Partial<GardenData> | null;
+}
+
+const workspaceScopedKeys = [
+  "fieldNotes",
+  "workItems",
+  "relationships",
+  "sources",
+  "objectNotes",
+  "objectLinks",
+  "objectActivity",
+  "objectNextActions",
+  "taskGardenItems",
+  "objectComments",
+] as const;
+
+const relationScopedKeys = ["objectRelations"] as const;
+
+type IdRecord = { id?: string };
+type WorkspaceRecord = { workspaceId?: string };
+
+const asArray = <T>(value: unknown): T[] => Array.isArray(value) ? value as T[] : [];
+
+const mergeById = <T extends IdRecord>(base: T[] = [], incoming: T[] = []) => {
+  const incomingIds = new Set(incoming.map((item) => item.id).filter(Boolean));
+  return [...base.filter((item) => !item.id || !incomingIds.has(item.id)), ...incoming];
+};
+
+const forWorkspace = <T extends WorkspaceRecord>(items: T[] = [], workspaceId: string) =>
+  items.filter((item) => item.workspaceId === workspaceId);
+
+const withoutWorkspace = <T extends WorkspaceRecord>(items: T[] = [], workspaceId: string) =>
+  items.filter((item) => item.workspaceId !== workspaceId);
+
+const mergeSharedGardenData = (
+  base: Partial<GardenData>,
+  shared: Partial<GardenData>,
+  workspaceId: string,
+): Partial<GardenData> => {
+  const next: Partial<GardenData> = { ...base };
+  next.members = mergeById(asArray(base.members), asArray(shared.members));
+  next.workspaces = mergeById(asArray(base.workspaces), asArray(shared.workspaces));
+  for (const key of workspaceScopedKeys) {
+    const baseItems = asArray<WorkspaceRecord>(base[key]);
+    const sharedItems = forWorkspace(asArray<WorkspaceRecord>(shared[key]), workspaceId);
+    (next as Record<string, unknown>)[key] = [...withoutWorkspace(baseItems, workspaceId), ...sharedItems];
+  }
+  for (const key of relationScopedKeys) {
+    const baseItems = asArray<WorkspaceRecord>(base[key]);
+    const sharedItems = forWorkspace(asArray<WorkspaceRecord>(shared[key]), workspaceId);
+    (next as Record<string, unknown>)[key] = [...withoutWorkspace(baseItems, workspaceId), ...sharedItems];
+  }
+  return next;
+};
+
+const extractSharedGardenData = (data: Partial<GardenData>, workspaceId: string): Partial<GardenData> => {
+  const workspace = asArray<GardenData["workspaces"][number]>(data.workspaces).find((item) => item.id === workspaceId);
+  const memberIds = new Set(workspace?.memberIds ?? []);
+  const shared: Partial<GardenData> = {
+    members: asArray<GardenData["members"][number]>(data.members).filter((member) => memberIds.size === 0 || memberIds.has(member.id)),
+    workspaces: workspace ? [workspace] : [],
+  };
+  for (const key of workspaceScopedKeys) {
+    (shared as Record<string, unknown>)[key] = forWorkspace(asArray<WorkspaceRecord>(data[key]), workspaceId);
+  }
+  for (const key of relationScopedKeys) {
+    (shared as Record<string, unknown>)[key] = forWorkspace(asArray<WorkspaceRecord>(data[key]), workspaceId);
+  }
+  return shared;
+};
+
+const loadSharedMemberships = async (client: SupabaseClient, userId: string) => {
+  const { data, error } = await client
+    .from("shared_garden_members")
+    .select("workspace_id, role")
+    .eq("user_id", userId);
+  if (error) throw error;
+  return (data ?? []) as SharedGardenMembershipRow[];
+};
+
+export const supabaseSharedGardenAdapter = ({
+  client,
+  userId,
+  table = "garden_data",
+}: SupabaseAdapterConfig): StorageAdapter<Partial<GardenData>> => {
+  const personalAdapter = supabaseAdapter<Partial<GardenData>>({ client, userId, table });
+  return {
+    async load() {
+      const personalData = await personalAdapter.load();
+      const memberships = await loadSharedMemberships(client, userId);
+      if (!memberships.length) return personalData;
+      const workspaceIds = memberships.map((membership) => membership.workspace_id);
+      const { data, error } = await client
+        .from("shared_garden_data")
+        .select("workspace_id, data")
+        .in("workspace_id", workspaceIds);
+      if (error) throw error;
+      const merged = ((data ?? []) as SharedGardenDataRow[]).reduce(
+        (merged, row) => mergeSharedGardenData(merged, row.data ?? {}, row.workspace_id),
+        personalData ?? {},
+      );
+      return {
+        ...merged,
+        profile: merged.profile ? { ...merged.profile, id: userId } : merged.profile,
+      };
+    },
+    async save(value) {
+      await personalAdapter.save(value);
+      const memberships = await loadSharedMemberships(client, userId);
+      await Promise.all(memberships.map((membership) =>
+        client
+          .from("shared_garden_data")
+          .update({
+            data: extractSharedGardenData(value, membership.workspace_id),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("workspace_id", membership.workspace_id)
+          .then(({ error }) => {
+            if (error) throw error;
+          }),
+      ));
+    },
+    async clear() {
+      await personalAdapter.clear();
+    },
+  };
+};

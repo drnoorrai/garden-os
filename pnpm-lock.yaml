@@ -330,6 +330,9 @@ importers:
 
   packages/storage:
     dependencies:
+      '@garden/types':
+        specifier: workspace:*
+        version: link:../types
       '@supabase/supabase-js':
         specifier: ^2.106.2
         version: 2.106.2

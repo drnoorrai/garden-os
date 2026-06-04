@@ -4,6 +4,9 @@
   "type": "module",
   "exports": { ".": "./src/index.ts" },
   "scripts": { "typecheck": "tsc --noEmit -p tsconfig.json" },
-  "dependencies": { "@supabase/supabase-js": "^2.106.2" },
+  "dependencies": {
+    "@garden/types": "workspace:*",
+    "@supabase/supabase-js": "^2.106.2"
+  },
   "devDependencies": { "typescript": "^5.8.3" }
 }
