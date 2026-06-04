@@ -2,20 +2,26 @@
 
 Garden OS is a calm, local-first operating system for intentional living.
 
-V2 turns the product into a modular orchestration layer: `Today` remains the daily control centre, while `Train`, `Think`, `Work` and `Eat` are independently owned domain modules that feed context back into Today intelligence.
+V2 turns the product into a modular orchestration layer: `Work` is the capture-first control centre, while `Train`, `Think` and `Eat` remain independently owned domain modules.
 
 The product goal is simple: opening the app should make life feel organized.
 
 ## V2 Experience
 
-- `Today` aggregates live signals from every module through deterministic Today intelligence.
-- `/` is a public, example-filled landing page showing how a healthtech founder might use Garden OS.
+- `Work` is the default surface for quick capture, content development, relationship context, shared prioritization and execution.
+- `/` is a public, Quick Capture-led landing page for creators, partners, operators and anyone turning mental clutter into organized context.
 - New private workspaces start fresh after login, with example content kept out of account data.
-- First-run onboarding explains Today, the modules and the evening review loop before opening the workspace.
+- First-run onboarding explains Quick Capture, universal object pages and private/shared workspaces before opening the workspace.
+- The local mock includes `My Garden` and a shared `Noor + Sonum` Partner Garden while preserving the existing local-first JSON sync model.
 - Quick Capture includes a `Content` category that feeds a dedicated `/work/content` development lane.
+- Quick Capture includes `Person` and `Company` categories that feed a dedicated `/work/relationships` CRM-style lane.
+- Shared Quick Capture can also send items directly into `/work/task-garden`.
+- Universal Object Pages give people, companies, content ideas, field notes and sources one shared pattern for summaries, notes, links, related objects, backlinks, activity and next actions.
+- Universal Object Pages now show workspace, visibility, comments and shared next actions.
+- Pasted YouTube, podcast and news links become source objects for timestamped notes and content idea generation.
 - `Train` brings the core Tension experience into Garden OS: workout templates, session flow, movement system, hard-set volume, phase-aware targets and history.
 - `Think` combines Clarity, Field Notes, Journal, Decisions and Mental Models into one private thinking system.
-- `Work` unifies GTD capture, Rai Bets prioritization, Task Garden execution, MoSCoW project scope and weekly sprint focus.
+- `Work` unifies GTD capture, content development, relationship context, Task Garden execution, MoSCoW project scope and weekly sprint focus.
 - `Eat` stays intentionally lightweight: protein, hydration, meal planning, groceries and energy awareness.
 - Existing V1 local data is preserved by a migration layer and expanded with V2 defaults.
 
@@ -30,7 +36,7 @@ packages/
   auth/             Supabase Auth provider, login screen and route guard
   ai/               Public deterministic intelligence API
   design-system/    Shared module headers, tabs and stats
-  domain/           Seed data and daily planning rules
+  domain/           Seed data, daily planning rules and object graph helpers
   shared-state/     GardenProvider, UserContext and V1-to-V2 migration
   storage/          Local storage adapter and Supabase sync adapter
   today-engine/     Cross-module Today intelligence
@@ -39,7 +45,7 @@ packages/
 modules/
   train/            Tension-inspired training domain
   think/            Clarity, notes, journal, decisions and mental models
-  work/             Inbox, bets, execution, projects and sprint
+  work/             Inbox, content, relationships, shared Task Garden, execution and projects
   eat/              Meals, groceries, hydration and protein
 ```
 
@@ -61,10 +67,10 @@ The current AI layer is deterministic by design. It produces summaries, recommen
 
 | Route | Purpose |
 | --- | --- |
-| `/` | Public healthtech-founder example landing page |
+| `/` | Public Quick Capture-led landing page |
 | `/login` | Email magic-link and Google sign-in |
 | `/onboarding` | First-run walkthrough for fresh private workspaces |
-| `/today` | Daily control centre |
+| `/today` | Legacy redirect to `/work` |
 | `/train`, `/train/session`, `/train/history`, `/train/settings` | Training week, workout flow, history and structure |
 | `/think` | Thinking system overview |
 | `/think/clarity` | Guided clarity sessions |
@@ -75,15 +81,20 @@ The current AI layer is deterministic by design. It produces summaries, recommen
 | `/work` | Work overview |
 | `/work/inbox` | GTD capture and triage |
 | `/work/content` | Content idea development |
-| `/work/prioritize` | Rai Bets-style prioritization |
+| `/work/relationships` | People and companies CRM-style context |
+| `/work/task-garden` | Shared 3-zone Task Garden: Do Now, Develop, Ask / Delegate |
 | `/work/execute` | Task Garden-style Kanban execution, with weekly focus and capacity |
 | `/work/projects` | MoSCoW project scope |
+| `/objects/person/:id`, `/objects/company/:id` | Universal relationship object pages |
+| `/objects/content/:id` | Universal content idea page |
+| `/objects/note/:id` | Universal field note page |
+| `/objects/source/:id` | Universal source page with manual timestamp notes |
 | `/eat`, `/eat/plan`, `/eat/groceries` | Nutrition support |
 | `/review` | Evening review |
 | `/weekly-review` | Weekly reflection summary |
 | `/settings` | Local profile preferences and demo reset |
 
-Legacy work routes `/work/bets`, `/work/kanban` and `/work/sprint` redirect to `/work/prioritize` and `/work/execute` (weekly focus and capacity now live within Execute).
+Legacy work routes `/work/prioritize`, `/work/bets`, `/work/kanban` and `/work/sprint` redirect to active Work surfaces.
 
 ## Development
 
@@ -94,7 +105,7 @@ pnpm install
 pnpm dev
 ```
 
-Vite serves the app locally. `/` is the public landing page and private users land on `/today` after onboarding.
+Vite serves the app locally. `/` is the public landing page and private users land on `/work` after onboarding.
 
 Validation:
 

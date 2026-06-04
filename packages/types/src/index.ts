@@ -1,9 +1,12 @@
 export type TaskTier = "big" | "medium" | "small";
 export type TaskStatus = "active" | "completed" | "deferred";
-export type WorkItemKind = "task" | "idea" | "thought" | "obligation" | "content";
+export type WorkItemKind = "task" | "idea" | "thought" | "obligation" | "content" | "person" | "company";
 export type TriageAction = "untriaged" | "do-now" | "defer" | "delegate" | "delete";
 export type ContentStage = "seed" | "angle" | "outline" | "draft" | "published";
 export type ContentFormat = "post" | "essay" | "thread" | "video" | "newsletter";
+export type RelationshipKind = "person" | "company";
+export type RelationshipStage = "new" | "active" | "follow-up" | "warm" | "archived";
+export type RelationshipNoteKind = "note" | "idea" | "link";
 export type BetStatus = "considering" | "active" | "complete" | "parked";
 export type BetStage = "triage" | "exploring" | "committed" | "in-flight" | "shipped" | "archive";
 export type BetConviction = "high" | "medium" | "speculative";
@@ -12,6 +15,35 @@ export type NoteCategory = "Research" | "Essays" | "Mental Models" | "Saved Insi
 export type MoscowPriority = "must" | "should" | "could" | "wont";
 export type TrainingPhase = "bulk" | "maintain" | "cut" | "deload";
 export type ModuleId = "train" | "think" | "work" | "eat";
+export type UniversalObjectKind = "person" | "company" | "content" | "note" | "source";
+export type ObjectNoteKind = "note" | "idea" | "link";
+export type ObjectRelationLabel = "mentions" | "source-for" | "about" | "works-at" | "inspired-by";
+export type SourceType = "youtube" | "podcast" | "article" | "news" | "link";
+export type WorkspaceKind = "private" | "shared";
+export type WorkspaceRole = "owner" | "partner";
+export type ObjectVisibility = "private" | "shared";
+export type TaskGardenZone = "do-now" | "develop" | "ask-delegate";
+
+export interface ObjectWorkspaceFields {
+  workspaceId?: string;
+  visibility?: ObjectVisibility;
+  createdBy?: string;
+  updatedBy?: string;
+}
+
+export interface Workspace {
+  id: string;
+  name: string;
+  kind: WorkspaceKind;
+  memberIds: string[];
+}
+
+export interface GardenMember {
+  id: string;
+  name: string;
+  email?: string;
+  avatarInitials: string;
+}
 
 export interface UserProfile {
   id: string;
@@ -64,7 +96,7 @@ export interface ClaritySession {
   answers: Record<string, string>;
 }
 
-export interface FieldNote {
+export interface FieldNote extends ObjectWorkspaceFields {
   id: string;
   createdAt: string;
   title: string;
@@ -74,7 +106,7 @@ export interface FieldNote {
   sourceUrl?: string;
 }
 
-export interface WorkItem {
+export interface WorkItem extends ObjectWorkspaceFields {
   id: string;
   createdAt: string;
   title: string;
@@ -84,6 +116,102 @@ export interface WorkItem {
   contentFormat?: ContentFormat;
   audience?: string;
   hook?: string;
+}
+
+export interface RelationshipNote {
+  id: string;
+  createdAt: string;
+  kind: RelationshipNoteKind;
+  body: string;
+}
+
+export interface RelationshipRecord extends ObjectWorkspaceFields {
+  id: string;
+  createdAt: string;
+  kind: RelationshipKind;
+  name: string;
+  stage: RelationshipStage;
+  role?: string;
+  companyId?: string;
+  notes: RelationshipNote[];
+}
+
+export interface ObjectRef {
+  kind: UniversalObjectKind;
+  id: string;
+}
+
+export interface ObjectNote extends ObjectWorkspaceFields {
+  id: string;
+  object: ObjectRef;
+  createdAt: string;
+  body: string;
+  kind: ObjectNoteKind;
+  timestampSeconds?: number;
+}
+
+export interface ObjectLink extends ObjectWorkspaceFields {
+  id: string;
+  object: ObjectRef;
+  createdAt: string;
+  url: string;
+  label?: string;
+}
+
+export interface ObjectRelation {
+  id: string;
+  from: ObjectRef;
+  to: ObjectRef;
+  label?: ObjectRelationLabel;
+  workspaceId?: string;
+}
+
+export interface ObjectActivity extends ObjectWorkspaceFields {
+  id: string;
+  object: ObjectRef;
+  createdAt: string;
+  action: string;
+  detail?: string;
+}
+
+export interface ObjectNextAction extends ObjectWorkspaceFields {
+  id: string;
+  object: ObjectRef;
+  title: string;
+  status: "open" | "done";
+  dueDate?: string;
+}
+
+export interface SourceRecord extends ObjectWorkspaceFields {
+  id: string;
+  createdAt: string;
+  title: string;
+  url: string;
+  sourceType: SourceType;
+  publisher?: string;
+  summary?: string;
+}
+
+export interface TaskGardenItem {
+  id: string;
+  objectRef?: ObjectRef;
+  workspaceId: string;
+  zone: TaskGardenZone;
+  title: string;
+  notes?: string;
+  ownerId?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface ObjectComment {
+  id: string;
+  object: ObjectRef;
+  workspaceId: string;
+  authorId: string;
+  body: string;
+  createdAt: string;
 }
 
 export interface Bet {
@@ -263,7 +391,6 @@ export interface WorkTodaySummary {
   priority: string;
   blockers: number;
   sprintLoad: "clear" | "balanced" | "overloaded";
-  activeBets: number;
 }
 
 export interface ThinkTodaySummary {
@@ -286,11 +413,22 @@ export type ModuleTodaySummary = TrainTodaySummary | WorkTodaySummary | ThinkTod
 
 export interface GardenData {
   profile: UserProfile;
+  members: GardenMember[];
+  workspaces: Workspace[];
   plans: DailyPlan[];
   reviews: ReviewEntry[];
   claritySessions: ClaritySession[];
   fieldNotes: FieldNote[];
   workItems: WorkItem[];
+  relationships: RelationshipRecord[];
+  sources: SourceRecord[];
+  objectNotes: ObjectNote[];
+  objectLinks: ObjectLink[];
+  objectRelations: ObjectRelation[];
+  objectActivity: ObjectActivity[];
+  objectNextActions: ObjectNextAction[];
+  taskGardenItems: TaskGardenItem[];
+  objectComments: ObjectComment[];
   bets: Bet[];
   kanbanCards: KanbanCard[];
   training: TrainingEntry[];

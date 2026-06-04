@@ -1,24 +1,26 @@
 import { useAuth } from "@garden/auth";
 import { useGarden } from "@garden/shared-state";
 import { Button, cn } from "@garden/ui";
-import { BookOpen, Dumbbell, House, Leaf, LogOut, Plus, Settings, SquareCheckBig, UtensilsCrossed } from "lucide-react";
+import { BookOpen, Dumbbell, Leaf, LogOut, Plus, Settings, SquareCheckBig, UtensilsCrossed } from "lucide-react";
 import { type PropsWithChildren, useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { QuickCapture } from "./QuickCapture";
 
 const primary = [
-  { to: "/today", label: "Today", icon: House },
+  { to: "/work", label: "Work", icon: SquareCheckBig },
   { to: "/train", label: "Train", icon: Dumbbell },
   { to: "/think", label: "Think", icon: BookOpen },
-  { to: "/work", label: "Work", icon: SquareCheckBig },
   { to: "/eat", label: "Eat", icon: UtensilsCrossed },
 ];
 
 export const AppShell = ({ children }: PropsWithChildren) => {
   const navigate = useNavigate();
   const auth = useAuth();
-  const { syncError, syncStatus } = useGarden();
+  const { activeWorkspace, activeWorkspaceId, data, setActiveWorkspaceId, syncError, syncStatus } = useGarden();
   const accountLabel = auth.user?.email ?? (auth.enabled ? "Signed in" : "Local mode");
+  const activeMembers = activeWorkspace.memberIds
+    .map((memberId) => data.members.find((member) => member.id === memberId))
+    .filter(Boolean);
   const syncLabel = auth.enabled && auth.user
     ? syncStatus === "synced"
       ? "Synced across devices"
@@ -84,6 +86,33 @@ export const AppShell = ({ children }: PropsWithChildren) => {
             ⌘K
           </kbd>
         </button>
+        <section className="mt-5 rounded-[1.35rem] border border-ink/6 bg-white/70 p-3 shadow-card">
+          <label htmlFor="workspace-switcher" className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+            Workspace
+          </label>
+          <select
+            id="workspace-switcher"
+            value={activeWorkspaceId}
+            onChange={(event) => setActiveWorkspaceId(event.target.value)}
+            className="mt-2 h-10 w-full rounded-2xl border border-ink/10 bg-mist px-3 text-sm font-medium text-ink outline-none"
+          >
+            {data.workspaces.map((workspace) => (
+              <option key={workspace.id} value={workspace.id}>
+                {workspace.name}
+              </option>
+            ))}
+          </select>
+          <p className="mt-2 text-xs leading-5 text-muted">
+            {activeWorkspace.kind === "shared"
+              ? `Shared with ${activeMembers.map((member) => member?.name).join(" + ")}.`
+              : "Private captures stay in your Garden."}
+          </p>
+          {activeWorkspace.kind === "shared" ? (
+            <button className="mt-3 w-full rounded-2xl bg-forest/8 px-3 py-2 text-left text-xs font-medium text-forest">
+              Invite Sonum account linking is coming. This mock shows the shared Garden now.
+            </button>
+          ) : null}
+        </section>
         <div className="mt-auto space-y-3">
           <div className="rounded-2xl bg-white/70 p-3 text-xs text-muted">
             <p className="font-medium text-ink">{accountLabel}</p>
@@ -105,13 +134,30 @@ export const AppShell = ({ children }: PropsWithChildren) => {
         </div>
       </aside>
       <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-ink/5 bg-canvas/90 px-5 backdrop-blur lg:hidden">
-        <NavLink to="/today" className="flex items-center gap-2.5">
+        <NavLink to="/work" className="flex items-center gap-2.5">
           <Leaf className="text-forest" size={19} />
-          <span className="font-serif text-xl tracking-tight">Garden OS</span>
+          <span>
+            <span className="block font-serif text-xl leading-5 tracking-tight">Garden OS</span>
+            <span className="text-[11px] text-muted">{activeWorkspace.name}</span>
+          </span>
         </NavLink>
-        <Button variant="secondary" className="h-9 min-h-9 px-3" onClick={() => navigate("/review")}>
-          Review
-        </Button>
+        <div className="flex items-center gap-2">
+          <select
+            aria-label="Workspace"
+            value={activeWorkspaceId}
+            onChange={(event) => setActiveWorkspaceId(event.target.value)}
+            className="h-9 rounded-2xl border border-ink/8 bg-white/80 px-3 text-xs font-medium text-ink outline-none"
+          >
+            {data.workspaces.map((workspace) => (
+              <option key={workspace.id} value={workspace.id}>
+                {workspace.name}
+              </option>
+            ))}
+          </select>
+          <Button variant="secondary" className="h-9 min-h-9 px-3" onClick={() => navigate("/review")}>
+            Review
+          </Button>
+        </div>
       </header>
       <main className="mx-auto max-w-[1240px] px-5 pb-28 pt-7 sm:px-8 lg:ml-64 lg:px-12 lg:pb-12 lg:pt-11">
         {children}

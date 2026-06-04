@@ -37,7 +37,7 @@ export const AuthProvider = ({ children, config }: PropsWithChildren<{ config: A
   const [client] = useState(() => createSupabaseClient(config));
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(!client);
-  const redirectTo = config.redirectTo ?? `${window.location.origin}/today`;
+  const redirectTo = config.redirectTo ?? `${window.location.origin}/work`;
 
   useEffect(() => {
     if (!client) return;
@@ -110,7 +110,7 @@ export const RequireAuth = ({ children }: PropsWithChildren) => {
 export const LoginPage = () => {
   const auth = useAuth();
   const location = useLocation();
-  const from = typeof location.state === "object" && location.state && "from" in location.state ? String(location.state.from) : "/today";
+  const from = typeof location.state === "object" && location.state && "from" in location.state ? String(location.state.from) : "/work";
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
   const [error, setError] = useState<string | null>(null);

@@ -1,11 +1,11 @@
 import { ModuleHeader, ModuleTabs } from "@garden/design-system";
-import { createId, todayKey } from "@garden/domain";
+import { createId, objectPath, todayKey } from "@garden/domain";
 import { useGarden } from "@garden/shared-state";
 import type { NoteCategory } from "@garden/types";
 import { Button, Card, cn, Input, Pill, SectionHeading, Textarea } from "@garden/ui";
 import { ArrowRight, BookText, Compass, Plus, Scale, Sparkles } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { Route, Routes, useSearchParams } from "react-router-dom";
+import { Link as RouterLink, Route, Routes, useSearchParams } from "react-router-dom";
 import { clarityStages, getTodaySummary } from "./lib";
 import { LinkedText, LinkTextarea, linkTargets, ReferencedBy } from "./linking";
 
@@ -168,7 +168,7 @@ const FieldNotes = () => {
           {notes.map((note) => (
             <Card key={note.id} id={`think-${note.id}`} className={cn("p-6 transition", focusId === note.id && "ring-2 ring-sage")}>
               <div className="flex justify-between"><Pill tone="stone">{note.category}</Pill><span className="text-xs text-muted">{note.createdAt}</span></div>
-              <h2 className="mt-4 font-serif text-2xl tracking-tight">{note.title}</h2>
+              <RouterLink to={objectPath({ kind: "note", id: note.id })} className="mt-4 block font-serif text-2xl tracking-tight hover:text-forest hover:underline">{note.title}</RouterLink>
               <p className="mt-3 text-sm leading-7 text-muted"><LinkedText text={note.body} targets={targets} /></p>
               <div className="mt-4 flex gap-2">{note.tags.map((tag) => <Pill key={tag}>{tag}</Pill>)}</div>
               <ReferencedBy title={note.title} data={data} />

@@ -1,40 +1,36 @@
-import type { GardenData } from "@garden/types";
+import { getUniversalObjects, parseWikiLinks } from "@garden/domain";
+import type { GardenData, UniversalObjectKind } from "@garden/types";
 import { Textarea } from "@garden/ui";
 import { Fragment, type TextareaHTMLAttributes, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-export type LinkKind = "note" | "model" | "decision" | "journal";
+export type LinkKind = UniversalObjectKind | "model" | "decision" | "journal";
 
 export interface LinkTarget {
   id: string;
   title: string;
   kind: LinkKind;
+  href: string;
 }
 
 export const KIND_LABEL: Record<LinkKind, string> = {
+  person: "Person",
+  company: "Company",
+  content: "Content",
   note: "Field Note",
+  source: "Source",
   model: "Mental Model",
   decision: "Decision",
   journal: "Journal",
-};
-
-const KIND_ROUTE: Record<LinkKind, string> = {
-  note: "/think/field-notes",
-  model: "/think/models",
-  decision: "/think/decisions",
-  journal: "/think/journal",
 };
 
 const LINK_PATTERN = /\[\[([^\]\n]+)\]\]/g;
 
 /** Extract the titles referenced inside [[double brackets]] in a body of text. */
 export const parseLinks = (text: string): string[] => {
-  const titles: string[] = [];
-  for (const match of text.matchAll(LINK_PATTERN)) {
-    const title = match[1].trim();
-    if (title) titles.push(title);
-  }
-  return titles;
+  if (!LINK_PATTERN.test(text)) return [];
+  LINK_PATTERN.lastIndex = 0;
+  return parseWikiLinks(text);
 };
 
 /**
@@ -43,9 +39,9 @@ export const parseLinks = (text: string): string[] => {
  * They can still link to other notes (they are scanned as sources).
  */
 export const linkTargets = (data: GardenData): LinkTarget[] => [
-  ...data.fieldNotes.map((note) => ({ id: note.id, title: note.title, kind: "note" as const })),
-  ...data.mentalModels.map((model) => ({ id: model.id, title: model.title, kind: "model" as const })),
-  ...data.decisions.map((decision) => ({ id: decision.id, title: decision.decision, kind: "decision" as const })),
+  ...getUniversalObjects(data).map((object) => ({ id: object.ref.id, title: object.title, kind: object.kind, href: object.href })),
+  ...data.mentalModels.map((model) => ({ id: model.id, title: model.title, kind: "model" as const, href: `/think/models?ref=${model.id}` })),
+  ...data.decisions.map((decision) => ({ id: decision.id, title: decision.decision, kind: "decision" as const, href: `/think/decisions?ref=${decision.id}` })),
 ];
 
 interface SourceDoc {
@@ -53,28 +49,38 @@ interface SourceDoc {
   title: string;
   kind: LinkKind;
   text: string;
+  href: string;
 }
 
 /** Every Think entry whose free text may contain [[links]]. */
 const sourceDocs = (data: GardenData): SourceDoc[] => [
-  ...data.fieldNotes.map((note) => ({ id: note.id, title: note.title, kind: "note" as const, text: note.body })),
+  ...getUniversalObjects(data).map((object) => ({
+    id: `${object.kind}:${object.ref.id}`,
+    title: object.title,
+    kind: object.kind,
+    text: object.text,
+    href: object.href,
+  })),
   ...data.mentalModels.map((model) => ({
     id: model.id,
     title: model.title,
     kind: "model" as const,
     text: `${model.principle} ${model.application}`,
+    href: `/think/models?ref=${model.id}`,
   })),
   ...data.decisions.map((decision) => ({
     id: decision.id,
     title: decision.decision,
     kind: "decision" as const,
     text: decision.rationale,
+    href: `/think/decisions?ref=${decision.id}`,
   })),
   ...data.journal.map((entry) => ({
     id: entry.id,
     title: `${entry.title} · ${entry.date}`,
     kind: "journal" as const,
     text: entry.body,
+    href: "/think/journal",
   })),
 ];
 
@@ -82,6 +88,7 @@ export interface Backlink {
   id: string;
   title: string;
   kind: LinkKind;
+  href: string;
 }
 
 /** Find every Think entry that references `title` via a [[link]] (case-insensitive). */
@@ -90,14 +97,14 @@ export const backlinksFor = (data: GardenData, title: string): Backlink[] => {
   return sourceDocs(data)
     .filter((doc) => doc.title.trim().toLowerCase() !== target)
     .filter((doc) => parseLinks(doc.text).some((link) => link.toLowerCase() === target))
-    .map(({ id, title: docTitle, kind }) => ({ id, title: docTitle, kind }));
+    .map(({ id, title: docTitle, kind, href }) => ({ id, title: docTitle, kind, href }));
 };
 
 const chipClass = "rounded-md bg-sage/15 px-1.5 py-0.5 text-[0.95em] font-medium text-forest transition hover:bg-sage/25";
 
 const useTargetNavigate = () => {
   const navigate = useNavigate();
-  return (kind: LinkKind, id: string) => navigate(`${KIND_ROUTE[kind]}?ref=${id}`);
+  return (href: string) => navigate(href);
 };
 
 /** Renders body text, turning [[links]] into navigable chips. Unresolved links show muted. */
@@ -113,7 +120,7 @@ export const LinkedText = ({ text, targets }: { text: string; targets: LinkTarge
         const target = targets.find((item) => item.title.toLowerCase() === title.toLowerCase());
         if (!target) return <span key={index} className="text-clay/70">{title}</span>;
         return (
-          <button key={index} type="button" onClick={() => go(target.kind, target.id)} className={chipClass}>
+          <button key={index} type="button" onClick={() => go(target.href)} className={chipClass}>
             {title}
           </button>
         );
@@ -135,7 +142,7 @@ export const ReferencedBy = ({ title, data }: { title: string; data: GardenData 
           <button
             key={link.id}
             type="button"
-            onClick={() => go(link.kind, link.id)}
+            onClick={() => go(link.href)}
             className="inline-flex items-center gap-1.5 rounded-full bg-mist px-2.5 py-1 text-xs font-medium text-muted transition hover:text-ink"
           >
             {link.title}

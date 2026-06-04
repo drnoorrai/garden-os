@@ -1,5 +1,7 @@
 import type { Bet, DailyPlan, DailyTask, GardenData, TaskTier } from "@garden/types";
 
+export * from "./objects";
+
 export const todayKey = () => new Date().toISOString().slice(0, 10);
 
 export const nextDayKey = (date: string) => {
@@ -15,6 +17,11 @@ export const prevDayKey = (date: string) => {
 };
 
 export const createId = () => crypto.randomUUID();
+
+export const DEFAULT_MEMBER_ID = "noor";
+export const SONUM_MEMBER_ID = "sonum";
+export const DEFAULT_PRIVATE_WORKSPACE_ID = "workspace-my-garden";
+export const DEFAULT_SHARED_WORKSPACE_ID = "workspace-noor-sonum";
 
 export const capacityForTier: Record<TaskTier, number> = {
   big: 1,
@@ -141,12 +148,40 @@ const task = (
 
 export const createSeedData = (date = todayKey()): GardenData => ({
   profile: {
-    id: "noor",
+    id: DEFAULT_MEMBER_ID,
     name: "Noor",
-    focusTheme: "Build a life with enough space to notice it.",
+    focusTheme: "Capture the open loops, then shape one clear next move.",
     proteinTarget: 125,
     onboardingComplete: true,
   },
+  members: [
+    {
+      id: DEFAULT_MEMBER_ID,
+      name: "Noor",
+      email: "noor@example.com",
+      avatarInitials: "NR",
+    },
+    {
+      id: SONUM_MEMBER_ID,
+      name: "Sonum",
+      email: "sonum@example.com",
+      avatarInitials: "S",
+    },
+  ],
+  workspaces: [
+    {
+      id: DEFAULT_PRIVATE_WORKSPACE_ID,
+      name: "My Garden",
+      kind: "private",
+      memberIds: [DEFAULT_MEMBER_ID],
+    },
+    {
+      id: DEFAULT_SHARED_WORKSPACE_ID,
+      name: "Noor + Sonum",
+      kind: "shared",
+      memberIds: [DEFAULT_MEMBER_ID, SONUM_MEMBER_ID],
+    },
+  ],
   plans: [
     {
       date,
@@ -154,7 +189,7 @@ export const createSeedData = (date = todayKey()): GardenData => ({
       energy: 3,
       hydrationComplete: false,
       activeClarityGoal: "Ship Garden OS without letting scope become the product.",
-      reflectionPrompt: "What deserves patient attention today?",
+      reflectionPrompt: "What deserves steady attention today?",
       mealSuggestion: "Lemon salmon, warm grains, greens and tahini.",
       tasks: [
         task("Shape the Garden OS Today experience", "big", 0, date, 90),
@@ -192,6 +227,9 @@ export const createSeedData = (date = todayKey()): GardenData => ({
       body: "An operating system should remove decisions before it adds tracking. This builds on [[Subtraction is care]] and the call to [[Keep V1 local-first]].",
       tags: ["product", "focus"],
       category: "Mental Models",
+      workspaceId: DEFAULT_PRIVATE_WORKSPACE_ID,
+      visibility: "private",
+      createdBy: DEFAULT_MEMBER_ID,
     },
     {
       id: createId(),
@@ -200,11 +238,235 @@ export const createSeedData = (date = todayKey()): GardenData => ({
       body: "Plans feel believable when they admit actual available time.",
       tags: ["ritual"],
       category: "Saved Insights",
+      workspaceId: DEFAULT_PRIVATE_WORKSPACE_ID,
+      visibility: "private",
+      createdBy: DEFAULT_MEMBER_ID,
     },
   ],
   workItems: [
-    { id: createId(), createdAt: date, title: "Explore trusted circle sharing", kind: "idea", triage: "untriaged" },
-    { id: createId(), createdAt: date, title: "Send design notes to collaborator", kind: "obligation", triage: "defer" },
+    {
+      id: "content-podcast-to-post",
+      createdAt: date,
+      title: "How to turn a podcast moment into a useful post",
+      kind: "content",
+      triage: "untriaged",
+      contentStage: "angle",
+      contentFormat: "post",
+      audience: "Creators and operators",
+      hook: "Most content systems start with a blank page. Garden OS starts with the exact moment that made you pause.",
+      workspaceId: DEFAULT_SHARED_WORKSPACE_ID,
+      visibility: "shared",
+      createdBy: DEFAULT_MEMBER_ID,
+    },
+    {
+      id: createId(),
+      createdAt: date,
+      title: "Plan the Sunday reset note",
+      kind: "idea",
+      triage: "untriaged",
+      workspaceId: DEFAULT_SHARED_WORKSPACE_ID,
+      visibility: "shared",
+      createdBy: SONUM_MEMBER_ID,
+    },
+    {
+      id: createId(),
+      createdAt: date,
+      title: "Send design notes to Sonum",
+      kind: "obligation",
+      triage: "defer",
+      workspaceId: DEFAULT_SHARED_WORKSPACE_ID,
+      visibility: "shared",
+      createdBy: DEFAULT_MEMBER_ID,
+    },
+  ],
+  relationships: [
+    {
+      id: "rel-sonum",
+      createdAt: date,
+      kind: "person",
+      name: "Sonum",
+      stage: "active",
+      role: "Partner, creator and Garden collaborator",
+      notes: [
+        { id: createId(), createdAt: date, kind: "idea", body: "Ask Sonum to help shape the strongest hook before drafting." },
+        { id: createId(), createdAt: date, kind: "note", body: "Shared Garden should feel like calm collaboration, not project management." },
+      ],
+      workspaceId: DEFAULT_SHARED_WORKSPACE_ID,
+      visibility: "shared",
+      createdBy: DEFAULT_MEMBER_ID,
+    },
+    {
+      id: "rel-common-room",
+      createdAt: date,
+      kind: "company",
+      name: "Common Room Studio",
+      stage: "active",
+      role: "Creator workspace and content archive",
+      notes: [
+        { id: createId(), createdAt: date, kind: "note", body: "A shared place for links, outlines, shoots and reusable ideas." },
+      ],
+      workspaceId: DEFAULT_SHARED_WORKSPACE_ID,
+      visibility: "shared",
+      createdBy: SONUM_MEMBER_ID,
+    },
+    {
+      id: "rel-alex",
+      createdAt: date,
+      kind: "person",
+      name: "Alex Rivera",
+      stage: "warm",
+      role: "Designer friend",
+      notes: [
+        { id: createId(), createdAt: date, kind: "note", body: "Might review the public landing page once the capture story is cleaner." },
+      ],
+      workspaceId: DEFAULT_PRIVATE_WORKSPACE_ID,
+      visibility: "private",
+      createdBy: DEFAULT_MEMBER_ID,
+    },
+  ],
+  sources: [
+    {
+      id: "source-creator-podcast",
+      createdAt: date,
+      title: "Creator podcast on turning attention into output",
+      url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      sourceType: "youtube",
+      publisher: "YouTube",
+      summary: "A source for notes on capturing moments, shaping angles and publishing without starting from a blank page.",
+      workspaceId: DEFAULT_SHARED_WORKSPACE_ID,
+      visibility: "shared",
+      createdBy: DEFAULT_MEMBER_ID,
+    },
+    {
+      id: "source-weekly-trends",
+      createdAt: date,
+      title: "Weekly trends worth saving",
+      url: "https://news.ycombinator.com/",
+      sourceType: "news",
+      publisher: "news.ycombinator.com",
+      summary: "A queue of outside ideas that could become commentary, conversation or saved reference.",
+      workspaceId: DEFAULT_SHARED_WORKSPACE_ID,
+      visibility: "shared",
+      createdBy: SONUM_MEMBER_ID,
+    },
+  ],
+  objectNotes: [
+    {
+      id: "obj-note-podcast-754",
+      object: { kind: "source", id: "source-creator-podcast" },
+      createdAt: date,
+      kind: "idea",
+      timestampSeconds: 754,
+      body: "This moment could become a post about saving the spark before trying to organize it. Ask [[Sonum]] for the warmer opening angle.",
+      workspaceId: DEFAULT_SHARED_WORKSPACE_ID,
+      visibility: "shared",
+      createdBy: DEFAULT_MEMBER_ID,
+    },
+    {
+      id: "obj-note-content-angle",
+      object: { kind: "content", id: "content-podcast-to-post" },
+      createdAt: date,
+      kind: "note",
+      body: "Use the timestamp as the opening observation, then explain how Quick Capture routes it into [[Common Room Studio]] and Task Garden.",
+      workspaceId: DEFAULT_SHARED_WORKSPACE_ID,
+      visibility: "shared",
+      createdBy: SONUM_MEMBER_ID,
+    },
+  ],
+  objectLinks: [
+    {
+      id: "obj-link-podcast",
+      object: { kind: "source", id: "source-creator-podcast" },
+      createdAt: date,
+      url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      label: "Podcast source",
+      workspaceId: DEFAULT_SHARED_WORKSPACE_ID,
+      visibility: "shared",
+      createdBy: DEFAULT_MEMBER_ID,
+    },
+  ],
+  objectRelations: [
+    {
+      id: "obj-rel-source-content",
+      from: { kind: "source", id: "source-creator-podcast" },
+      to: { kind: "content", id: "content-podcast-to-post" },
+      label: "source-for",
+      workspaceId: DEFAULT_SHARED_WORKSPACE_ID,
+    },
+    {
+      id: "obj-rel-content-sonum",
+      from: { kind: "content", id: "content-podcast-to-post" },
+      to: { kind: "person", id: "rel-sonum" },
+      label: "mentions",
+      workspaceId: DEFAULT_SHARED_WORKSPACE_ID,
+    },
+  ],
+  objectActivity: [
+    {
+      id: "obj-activity-source-note",
+      object: { kind: "source", id: "source-creator-podcast" },
+      createdAt: date,
+      action: "Captured timestamp note",
+      detail: "Marked the useful creator workflow moment at 12:34.",
+      workspaceId: DEFAULT_SHARED_WORKSPACE_ID,
+      visibility: "shared",
+      createdBy: DEFAULT_MEMBER_ID,
+    },
+  ],
+  objectNextActions: [
+    {
+      id: "obj-next-content",
+      object: { kind: "content", id: "content-podcast-to-post" },
+      title: "Sonum to suggest three hooks before Noor drafts.",
+      status: "open",
+      workspaceId: DEFAULT_SHARED_WORKSPACE_ID,
+      visibility: "shared",
+      createdBy: SONUM_MEMBER_ID,
+    },
+  ],
+  taskGardenItems: [
+    {
+      id: "task-garden-podcast",
+      objectRef: { kind: "content", id: "content-podcast-to-post" },
+      workspaceId: DEFAULT_SHARED_WORKSPACE_ID,
+      zone: "do-now",
+      title: "Turn the podcast timestamp into a post outline",
+      notes: "Start with the moment that made Noor pause. Sonum can sharpen the hook.",
+      ownerId: DEFAULT_MEMBER_ID,
+      createdBy: DEFAULT_MEMBER_ID,
+      createdAt: date,
+    },
+    {
+      id: "task-garden-shared-calendar",
+      workspaceId: DEFAULT_SHARED_WORKSPACE_ID,
+      zone: "develop",
+      title: "Shape a shared content rhythm for the week",
+      notes: "Needs shaping: what gets captured, what becomes a post and what stays as reference?",
+      ownerId: SONUM_MEMBER_ID,
+      createdBy: SONUM_MEMBER_ID,
+      createdAt: date,
+    },
+    {
+      id: "task-garden-ask-hook",
+      objectRef: { kind: "person", id: "rel-sonum" },
+      workspaceId: DEFAULT_SHARED_WORKSPACE_ID,
+      zone: "ask-delegate",
+      title: "Ask Sonum for a warmer opening angle",
+      notes: "Useful for making the idea sound human before outlining.",
+      ownerId: SONUM_MEMBER_ID,
+      createdBy: DEFAULT_MEMBER_ID,
+      createdAt: date,
+    },
+  ],
+  objectComments: [
+    {
+      id: "comment-sonum-content",
+      object: { kind: "content", id: "content-podcast-to-post" },
+      workspaceId: DEFAULT_SHARED_WORKSPACE_ID,
+      authorId: SONUM_MEMBER_ID,
+      body: "I like the angle if it starts with the relief of not losing a good idea, then shows the system.",
+      createdAt: date,
+    },
   ],
   bets: [
     { id: createId(), title: "Today-first operating loop", notes: "Make morning planning genuinely lighter.", impact: 5, effort: 3, status: "active" },
@@ -305,6 +567,33 @@ export const createFreshData = (date = todayKey()): GardenData => {
       proteinTarget: 120,
       onboardingComplete: false,
     },
+    members: [
+      {
+        id: "new-user",
+        name: "You",
+        avatarInitials: "Y",
+      },
+      {
+        id: SONUM_MEMBER_ID,
+        name: "Sonum",
+        email: "sonum@example.com",
+        avatarInitials: "S",
+      },
+    ],
+    workspaces: [
+      {
+        id: DEFAULT_PRIVATE_WORKSPACE_ID,
+        name: "My Garden",
+        kind: "private",
+        memberIds: ["new-user"],
+      },
+      {
+        id: DEFAULT_SHARED_WORKSPACE_ID,
+        name: "Noor + Sonum",
+        kind: "shared",
+        memberIds: ["new-user", SONUM_MEMBER_ID],
+      },
+    ],
     plans: [
       {
         date,
@@ -321,6 +610,15 @@ export const createFreshData = (date = todayKey()): GardenData => {
     claritySessions: [],
     fieldNotes: [],
     workItems: [],
+    relationships: [],
+    sources: [],
+    objectNotes: [],
+    objectLinks: [],
+    objectRelations: [],
+    objectActivity: [],
+    objectNextActions: [],
+    taskGardenItems: [],
+    objectComments: [],
     bets: [],
     kanbanCards: [],
     training: [],

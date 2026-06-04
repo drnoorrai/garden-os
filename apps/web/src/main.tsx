@@ -8,7 +8,7 @@ import "./index.css";
 const authConfig = {
   supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
   supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-  redirectTo: `${window.location.origin}/today`,
+  redirectTo: `${window.location.origin}/work`,
 };
 
 createRoot(document.getElementById("root")!).render(

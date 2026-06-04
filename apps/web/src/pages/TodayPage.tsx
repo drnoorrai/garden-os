@@ -236,7 +236,7 @@ export const TodayPage = () => {
             </SupportCard>
             <SupportCard title="Work" href="/work">
               <p className="font-medium">{work.priority}</p>
-              <p className="mt-2 text-sm text-muted">{work.activeBets} strategic bets · {work.sprintLoad} sprint</p>
+              <p className="mt-2 text-sm text-muted">{work.blockers} blockers · {work.sprintLoad} sprint</p>
               <Pill tone="clay">{attentionCount} need attention</Pill>
             </SupportCard>
             <SupportCard title="Eat" href="/eat">

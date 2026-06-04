@@ -1,29 +1,29 @@
 import { Button, Card, cn, Input, Label, Pill, Textarea } from "@garden/ui";
 import { useGarden } from "@garden/shared-state";
-import { ArrowRight, BookOpen, Dumbbell, Leaf, SquareCheckBig, UtensilsCrossed } from "lucide-react";
+import { ArrowRight, FileText, Leaf, Search, SquareCheckBig, UsersRound } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const chapters = [
   {
-    title: "Today is the control centre",
-    body: "Start with one big thing, three medium things and five small things. The point is not to fill every slot; it is to make the day believable.",
+    title: "Capture anything",
+    body: "Start by getting the open loop out of your head: a task, link, thought, person, company, source or content idea.",
   },
   {
-    title: "Modules inform the day",
-    body: "Train, Think, Work and Eat are separate tools, but their summaries feed Today so the app can recommend focus, restraint or recovery.",
+    title: "Route captures into objects",
+    body: "Garden OS turns raw captures into pages with summaries, notes, links, related objects, comments and next actions.",
   },
   {
-    title: "Review closes the loop",
-    body: "Evening review turns scattered experience into signal: energy, mood, blockers and what should move forward tomorrow.",
+    title: "Choose private or shared",
+    body: "Keep personal material in My Garden, or shape ideas with someone trusted inside a shared Garden.",
   },
 ];
 
 const tools = [
-  { icon: SquareCheckBig, title: "Work", text: "Capture, prioritize, execute and keep scope honest." },
-  { icon: BookOpen, title: "Think", text: "Clarity sessions, field notes, journal, decisions and mental models." },
-  { icon: Dumbbell, title: "Train", text: "Training structure, sessions, progression and recovery awareness." },
-  { icon: UtensilsCrossed, title: "Eat", text: "Protein, hydration, meal planning and energy support without macro obsession." },
+  { icon: Search, title: "Quick Capture", text: "Press Cmd/Ctrl + K to capture or find anything." },
+  { icon: FileText, title: "Object Pages", text: "Every person, company, note, source and content idea gets a home." },
+  { icon: UsersRound, title: "Shared Garden", text: "Choose when a capture belongs with a partner or collaborator." },
+  { icon: SquareCheckBig, title: "Task Garden", text: "Prioritize shared captures into Do Now, Develop or Ask / Delegate." },
 ];
 
 export const OnboardingPage = () => {
@@ -43,7 +43,7 @@ export const OnboardingPage = () => {
         onboardingComplete: true,
       },
     }));
-    navigate("/today", { replace: true });
+    navigate("/work", { replace: true });
   };
 
   return (
@@ -95,15 +95,15 @@ export const OnboardingPage = () => {
         </Card>
       ) : (
         <Card className="p-6 sm:p-8">
-          <p className="text-xs uppercase tracking-[0.16em] text-muted">Personalize the first screen</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-muted">Personalize the workspace</p>
           <h2 className="mt-4 font-serif text-4xl tracking-[-0.045em]">Start fresh, but not blank.</h2>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-muted">
-            These words guide Today while your workspace stays clear of example tasks, notes and projects.
+            These words guide your workspace while your account stays clear of example tasks, notes and projects.
           </p>
           <div className="mt-7 grid gap-4 md:grid-cols-2">
             <div>
               <Label htmlFor="onboarding-name">Name</Label>
-              <Input id="onboarding-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Noor" />
+              <Input id="onboarding-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Your name" />
             </div>
             <div>
               <Label htmlFor="onboarding-theme">Focus theme</Label>
@@ -112,7 +112,7 @@ export const OnboardingPage = () => {
                 rows={4}
                 value={focusTheme}
                 onChange={(event) => setFocusTheme(event.target.value)}
-                placeholder="Build a life and company with enough space to notice what matters."
+                placeholder="Create a calmer place to capture what matters and act on it deliberately."
               />
             </div>
           </div>
