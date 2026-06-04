@@ -1,4 +1,4 @@
-import { LoginPage, RequireAuth } from "@garden/auth";
+import { RequireAuth } from "@garden/auth";
 import { useGarden } from "@garden/shared-state";
 import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
@@ -46,7 +46,7 @@ const PrivateRoutes = () => {
 export const App = () => (
   <Routes>
     <Route path="/" element={<LandingPage />} />
-    <Route path="/login" element={<LoginPage />} />
+    <Route path="/login" element={<LandingPage />} />
     <Route
       path="*"
       element={

@@ -1,65 +1,171 @@
-import { Card, cn, Pill } from "@garden/ui";
-import { ArrowRight, Brain, CheckCircle2, FileText, Leaf, LockKeyhole, Search, UsersRound } from "lucide-react";
+import { useAuth } from "@garden/auth";
+import { Button, Card, Input, Label, Pill } from "@garden/ui";
+import {
+  ArrowRight,
+  Building2,
+  CheckSquare,
+  FileText,
+  Leaf,
+  Lightbulb,
+  Link as LinkIcon,
+  LockKeyhole,
+  Search,
+  UserRound,
+  UsersRound,
+  Video,
+} from "lucide-react";
+import { type FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
 
-const todayTasks = [
-  ["Capture", "Podcast note about attention becoming output", "12:34"],
-  ["Content", "Turn the strongest timestamp into a post outline", "35m"],
-  ["Shared", "Ask Sonum for three warmer opening hooks", "10m"],
-  ["Source", "Save the article for the weekly idea queue", "2m"],
-];
-
-const moduleExamples = [
+const captureTypes = [
   {
-    icon: Search,
-    title: "Quick Capture",
-    headline: "Everything lands somewhere useful",
-    body: "Tasks, links, people, companies and content ideas route into the right object instead of becoming clutter.",
+    icon: CheckSquare,
+    label: "Tasks",
+    example: "Send the draft, book the call, move the bill.",
+  },
+  {
+    icon: Lightbulb,
+    label: "Ideas",
+    example: "A half-formed thought before it disappears.",
   },
   {
     icon: FileText,
-    title: "Universal Objects",
-    headline: "One pattern for every idea",
-    body: "Sources, notes, people, companies and content ideas all share notes, links, related objects and next actions.",
+    label: "Content",
+    example: "Hooks, angles, outlines and things worth saying.",
   },
   {
-    icon: UsersRound,
-    title: "Partner Garden",
-    headline: "Shared without feeling corporate",
-    body: "A calm shared workspace for developing captures, prioritizing ideas and keeping relationship context together.",
+    icon: UserRound,
+    label: "People",
+    example: "Someone to remember, help, ask or follow up with.",
   },
   {
-    icon: Brain,
-    title: "Field Notes",
-    headline: "Backlinks for real life",
-    body: "Use [[links]] to connect notes, sources, people and ideas into a knowledge base that still feels human.",
+    icon: Building2,
+    label: "Companies",
+    example: "A partner, client, studio, fund, publication or lead.",
+  },
+  {
+    icon: Video,
+    label: "Sources",
+    example: "YouTube, podcasts, articles and top-news links.",
+  },
+  {
+    icon: LinkIcon,
+    label: "Links",
+    example: "Resources that need context, not another lost tab.",
+  },
+  {
+    icon: FileText,
+    label: "Notes",
+    example: "Field notes, reflections, decisions and mental models.",
   },
 ];
 
-const exampleDays = [
-  {
-    title: "Creator day",
-    mode: "Shaping",
-    note: "Capture source moments first. Turn only the strongest idea into a draft.",
-  },
-  {
-    title: "Deep work day",
-    mode: "Protected",
-    note: "Keep the morning block for one meaningful deliverable. Let the rest stay captured, not urgent.",
-  },
-  {
-    title: "Shared planning day",
-    mode: "Collaborative",
-    note: "Use the Task Garden to decide what to do now, what needs development and what to ask for.",
-  },
+const flow = [
+  ["Capture", "Type a thought, paste a URL, name a person or save a source."],
+  ["Route", "Garden OS turns it into the right object: task, note, person, company, source or content idea."],
+  ["Develop", "Add notes, links, backlinks, comments, timestamped thoughts and next actions."],
+  ["Share", "Keep it private in My Garden or send it to a shared workspace like Noor + Sonum."],
 ];
 
-const steps = [
-  "Capture anything that has your attention.",
-  "Route it into a task, note, source, person, company or content idea.",
-  "Choose private or shared workspace.",
-  "Turn the best captures into next actions.",
+const examples = [
+  "YouTube timestamp: 12:34, good opening for a post",
+  "Person: Maya, ask about the newsletter collaboration",
+  "Company: Common Room Studio, save the pitch link",
+  "Content: why quick capture beats a blank page",
+  "Task: send Sonum three hook options",
 ];
+
+const LandingAuthPanel = () => {
+  const auth = useAuth();
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  const submitEmail = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!email.trim()) return;
+    setError(null);
+    setStatus("sending");
+    try {
+      await auth.signInWithEmail(email.trim());
+      setStatus("sent");
+    } catch (caught) {
+      setStatus("idle");
+      setError(caught instanceof Error ? caught.message : "Could not send the login email.");
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    setError(null);
+    try {
+      await auth.signInWithGoogle();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not start Google sign in.");
+    }
+  };
+
+  return (
+    <Card className="p-5 shadow-card sm:p-6">
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <Pill tone="sage">Sign in</Pill>
+          <h2 className="mt-4 font-serif text-3xl tracking-[-0.045em]">Open your Garden.</h2>
+          <p className="mt-2 text-sm leading-6 text-muted">
+            Your account starts clean. Your captures sync privately, and shared workspace items sync with invited partners.
+          </p>
+        </div>
+        <LockKeyhole className="mt-1 shrink-0 text-sage" size={20} strokeWidth={1.8} />
+      </div>
+
+      {auth.enabled && auth.user ? (
+        <Link to="/work" className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-forest px-5 text-sm font-medium text-white transition hover:bg-ink">
+          Open Work
+          <ArrowRight className="ml-2" size={16} />
+        </Link>
+      ) : auth.enabled ? (
+        <>
+          <form className="space-y-4" onSubmit={submitEmail}>
+            <div>
+              <Label htmlFor="landing-email">Email</Label>
+              <Input
+                id="landing-email"
+                autoComplete="email"
+                inputMode="email"
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="you@example.com"
+                required
+                type="email"
+                value={email}
+              />
+            </div>
+            <Button className="w-full" disabled={status === "sending"} type="submit">
+              {status === "sending" ? "Sending..." : "Email me a login link"}
+            </Button>
+          </form>
+          <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-[0.16em] text-muted">
+            <span className="h-px flex-1 bg-ink/8" />
+            or
+            <span className="h-px flex-1 bg-ink/8" />
+          </div>
+          <Button className="w-full" onClick={signInWithGoogle} type="button" variant="secondary">
+            Continue with Google
+          </Button>
+          {status === "sent" ? (
+            <p className="mt-5 rounded-2xl bg-sage/12 p-4 text-sm leading-6 text-forest">
+              Check your email for a secure login link. It will bring you back to Garden OS.
+            </p>
+          ) : null}
+          {error ? <p className="mt-5 rounded-2xl bg-clay/12 p-4 text-sm leading-6 text-clay">{error}</p> : null}
+        </>
+      ) : (
+        <Link to="/work" className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-forest px-5 text-sm font-medium text-white transition hover:bg-ink">
+          Open local Garden
+          <ArrowRight className="ml-2" size={16} />
+        </Link>
+      )}
+    </Card>
+  );
+};
 
 export const LandingPage = () => (
   <main className="min-h-screen bg-canvas text-ink">
@@ -70,139 +176,93 @@ export const LandingPage = () => (
         </span>
         <span>
           <span className="block font-serif text-xl leading-5 tracking-tight">Garden OS</span>
-          <span className="text-xs text-muted">Intentional living</span>
+          <span className="text-xs text-muted">Quick capture for real life</span>
         </span>
       </Link>
       <nav className="hidden items-center gap-7 text-sm text-muted md:flex">
-        <a href="#example" className="hover:text-ink">Example</a>
-        <a href="#tools" className="hover:text-ink">Tools</a>
-        <a href="#onboarding" className="hover:text-ink">Onboarding</a>
+        <a href="#capture-types" className="hover:text-ink">What it captures</a>
+        <a href="#how-it-works" className="hover:text-ink">How it works</a>
+        <a href="#login" className="hover:text-ink">Login</a>
       </nav>
-      <Link
-        to="/login"
+      <a
+        href="#login"
         className="inline-flex min-h-10 items-center justify-center rounded-full bg-forest px-4 text-sm font-medium text-white transition hover:bg-ink"
       >
-        Start fresh
-      </Link>
+        Login
+      </a>
     </header>
 
-    <section className="mx-auto grid max-w-7xl items-center gap-10 px-5 pb-16 pt-8 sm:px-8 lg:grid-cols-[0.92fr_1.08fr] lg:pb-24 lg:pt-14">
+    <section className="mx-auto grid max-w-7xl items-center gap-8 px-5 pb-14 pt-8 sm:px-8 lg:grid-cols-[1.05fr_.72fr] lg:pb-20 lg:pt-16">
       <div>
-        <h1 className="max-w-3xl font-serif text-[3.2rem] leading-[0.98] tracking-[-0.06em] sm:text-[5.4rem]">
-          Capture what has your attention. Turn it into clarity.
+        <Pill tone="sage">Quick Capture</Pill>
+        <h1 className="mt-6 max-w-4xl font-serif text-[3.3rem] leading-[0.98] tracking-[-0.06em] sm:text-[5.8rem]">
+          Get it out of your head before it becomes clutter.
         </h1>
-        <p className="mt-7 max-w-xl text-lg leading-8 text-muted">
-          Garden OS is a calm place to catch ideas, links, tasks, people and source notes, then shape them into useful context with yourself or a trusted partner.
+        <p className="mt-7 max-w-2xl text-lg leading-8 text-muted">
+          Garden OS captures tasks, links, sources, people, companies, notes and content ideas, then turns them into objects you can develop, search and share.
         </p>
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <Link
-            to="/login"
-            className="inline-flex min-h-12 items-center justify-center rounded-full bg-forest px-6 text-sm font-medium text-white transition hover:bg-ink"
-          >
-            Start with a clean Garden
-            <ArrowRight className="ml-2" size={16} />
-          </Link>
-          <a
-            href="#example"
-            className="inline-flex min-h-12 items-center justify-center rounded-full border border-ink/8 bg-white px-6 text-sm font-medium text-ink transition hover:bg-mist"
-          >
-            See Quick Capture in action
-          </a>
+        <div className="mt-8 flex flex-wrap gap-2">
+          {["Task", "Idea", "Content", "Person", "Company", "Source", "Note", "Link"].map((item) => (
+            <span key={item} className="rounded-full border border-ink/8 bg-white px-3 py-1.5 text-sm font-medium text-muted">
+              {item}
+            </span>
+          ))}
         </div>
         <div className="mt-8 flex items-center gap-3 text-sm text-muted">
-          <LockKeyhole size={16} className="text-sage" />
-          Public examples stay here. Your account starts empty and private.
+          <Search size={16} className="text-sage" />
+          Capture mode for input. Find mode for everything you have already saved.
         </div>
       </div>
 
-      <Card id="example" className="overflow-hidden p-4 sm:p-6">
-        <div className="rounded-[1.35rem] bg-[#f1f2eb] p-5">
-          <div className="mb-6 flex items-start justify-between gap-4">
-            <div>
-              <p className="font-serif text-3xl tracking-tight">Good morning.</p>
-              <p className="mt-1 text-sm text-muted">Shared Garden · Thursday</p>
-            </div>
-            <Pill>2.5 focused hours</Pill>
-          </div>
-          <div className="grid gap-4 lg:grid-cols-[1.08fr_.92fr]">
-            <div className="space-y-3">
-              {todayTasks.map(([tier, title, time], index) => (
-                <div key={title} className={cn("rounded-2xl bg-white p-4 shadow-card", index === 0 && "border border-forest/10")}>
-                  <div className="mb-2 flex items-center justify-between text-xs uppercase tracking-[0.14em] text-muted">
-                    <span>{tier}</span>
-                    <span>{time}</span>
-                  </div>
-                  <p className={cn("text-sm font-medium", index === 0 && "font-serif text-2xl tracking-tight")}>{title}</p>
-                </div>
-              ))}
-            </div>
-            <div className="space-y-4">
-              <div className="rounded-2xl border border-sage/20 bg-white p-5">
-                <p className="text-xs uppercase tracking-[0.18em] text-forest/70">Today intelligence</p>
-                <p className="mt-3 font-serif text-2xl leading-8 tracking-tight">You have several sparks, but only one draft window.</p>
-                <p className="mt-3 text-sm leading-6 text-muted">Keep the article and person notes captured. Develop one content idea before adding more.</p>
-              </div>
-              <div className="rounded-2xl bg-white p-5">
-                <p className="text-sm font-medium">Suggested next action</p>
-                <p className="mt-2 text-sm leading-6 text-muted">Open the source note at 12:34 and write the first rough hook.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Card>
+      <section id="login">
+        <LandingAuthPanel />
+      </section>
     </section>
 
-    <section id="tools" className="mx-auto max-w-7xl px-5 py-16 sm:px-8">
+    <section id="capture-types" className="mx-auto max-w-7xl px-5 py-12 sm:px-8">
       <div className="mb-8 max-w-2xl">
-        <h2 className="font-serif text-4xl tracking-[-0.045em] sm:text-5xl">Quick Capture is the front door.</h2>
-        <p className="mt-4 text-base leading-7 text-muted">Garden OS is not a place to hoard tasks. It is a place to turn mental clutter into organized context: sources, people, notes, ideas and next actions.</p>
+        <h2 className="font-serif text-4xl tracking-[-0.045em] sm:text-5xl">One capture box. Many kinds of context.</h2>
+        <p className="mt-4 text-base leading-7 text-muted">
+          The point is not to create another inbox. The point is to put each thing where future you can actually use it.
+        </p>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {moduleExamples.map(({ icon: Icon, title, headline, body }) => (
-          <Card key={title} className="p-5">
-            <Icon className="text-sage" size={21} strokeWidth={1.8} />
-            <p className="mt-8 text-sm font-medium text-muted">{title}</p>
-            <h3 className="mt-2 font-serif text-2xl tracking-tight">{headline}</h3>
-            <p className="mt-3 text-sm leading-6 text-muted">{body}</p>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {captureTypes.map(({ icon: Icon, label, example }) => (
+          <Card key={label} className="p-5">
+            <Icon className="text-sage" size={20} strokeWidth={1.8} />
+            <h3 className="mt-8 font-serif text-2xl tracking-tight">{label}</h3>
+            <p className="mt-3 text-sm leading-6 text-muted">{example}</p>
           </Card>
         ))}
       </div>
     </section>
 
-    <section className="mx-auto grid max-w-7xl gap-5 px-5 py-16 sm:px-8 lg:grid-cols-[.85fr_1.15fr]">
+    <section id="how-it-works" className="mx-auto grid max-w-7xl gap-5 px-5 py-14 sm:px-8 lg:grid-cols-[.86fr_1.14fr]">
       <Card className="p-6 sm:p-8">
-        <h2 className="font-serif text-4xl tracking-[-0.045em]">Example daily modes</h2>
-        <p className="mt-4 text-sm leading-7 text-muted">The same person does not need the same system every day.</p>
+        <h2 className="font-serif text-4xl tracking-[-0.045em]">What a capture can become.</h2>
         <div className="mt-8 space-y-3">
-          {exampleDays.map((day) => (
-            <div key={day.title} className="rounded-2xl bg-mist/55 p-4">
-              <div className="flex items-center justify-between gap-4">
-                <p className="font-medium">{day.title}</p>
-                <Pill tone={day.mode === "Low power" ? "clay" : "sage"}>{day.mode}</Pill>
-              </div>
-              <p className="mt-2 text-sm leading-6 text-muted">{day.note}</p>
+          {examples.map((example) => (
+            <div key={example} className="rounded-2xl bg-mist/55 p-4 text-sm font-medium leading-6">
+              {example}
             </div>
           ))}
         </div>
       </Card>
-      <Card id="onboarding" className="p-6 sm:p-8">
-        <h2 className="font-serif text-4xl tracking-[-0.045em]">Then your account starts clean.</h2>
-        <p className="mt-4 text-sm leading-7 text-muted">
-          After sign-up, the example data disappears. Onboarding walks you through the tools, then your Work surface is ready for your real life.
-        </p>
+      <Card className="p-6 sm:p-8">
+        <h2 className="font-serif text-4xl tracking-[-0.045em]">The operating loop is simple.</h2>
         <div className="mt-8 grid gap-3 sm:grid-cols-2">
-          {steps.map((step, index) => (
-            <div key={step} className="rounded-2xl border border-ink/6 bg-white p-4">
-              <CheckCircle2 className="text-sage" size={18} />
-              <p className="mt-4 text-xs uppercase tracking-[0.16em] text-muted">Step {index + 1}</p>
-              <p className="mt-2 text-sm font-medium">{step}</p>
+          {flow.map(([title, body], index) => (
+            <div key={title} className="rounded-2xl border border-ink/6 bg-white p-4">
+              <p className="text-xs uppercase tracking-[0.16em] text-muted">Step {index + 1}</p>
+              <p className="mt-4 text-lg font-medium">{title}</p>
+              <p className="mt-2 text-sm leading-6 text-muted">{body}</p>
             </div>
           ))}
         </div>
-        <Link to="/login" className="mt-8 inline-flex min-h-11 items-center justify-center rounded-full bg-forest px-5 text-sm font-medium text-white transition hover:bg-ink">
-          Create your Garden
-          <ArrowRight className="ml-2" size={16} />
-        </Link>
+        <div className="mt-8 flex items-center gap-3 rounded-2xl bg-forest/8 p-4 text-sm leading-6 text-forest">
+          <UsersRound size={18} className="shrink-0" />
+          Shared workspaces let partners develop captures together without exposing private Gardens.
+        </div>
       </Card>
     </section>
   </main>
