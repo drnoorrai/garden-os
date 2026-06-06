@@ -75,12 +75,29 @@ const relationScopedKeys = ["objectRelations"] as const;
 
 type IdRecord = { id?: string };
 type WorkspaceRecord = { workspaceId?: string };
+type WorkspaceItem = GardenData["workspaces"][number];
 
 const asArray = <T>(value: unknown): T[] => Array.isArray(value) ? value as T[] : [];
 
 const mergeById = <T extends IdRecord>(base: T[] = [], incoming: T[] = []) => {
   const incomingIds = new Set(incoming.map((item) => item.id).filter(Boolean));
   return [...base.filter((item) => !item.id || !incomingIds.has(item.id)), ...incoming];
+};
+
+const mergeWorkspacesById = (base: WorkspaceItem[] = [], incoming: WorkspaceItem[] = []) => {
+  const byId = new Map<string, WorkspaceItem>();
+  for (const workspace of base) byId.set(workspace.id, workspace);
+  for (const workspace of incoming) {
+    const existing = byId.get(workspace.id);
+    byId.set(workspace.id, existing
+      ? {
+        ...existing,
+        ...workspace,
+        memberIds: [...new Set([...(existing.memberIds ?? []), ...(workspace.memberIds ?? [])])],
+      }
+      : workspace);
+  }
+  return [...byId.values()];
 };
 
 const forWorkspace = <T extends WorkspaceRecord>(items: T[] = [], workspaceId: string) =>
@@ -96,7 +113,7 @@ const mergeSharedGardenData = (
 ): Partial<GardenData> => {
   const next: Partial<GardenData> = { ...base };
   next.members = mergeById(asArray(base.members), asArray(shared.members));
-  next.workspaces = mergeById(asArray(base.workspaces), asArray(shared.workspaces));
+  next.workspaces = mergeWorkspacesById(asArray(base.workspaces), asArray(shared.workspaces));
   for (const key of workspaceScopedKeys) {
     const baseItems = asArray<WorkspaceRecord>(base[key]);
     const sharedItems = forWorkspace(asArray<WorkspaceRecord>(shared[key]), workspaceId);
@@ -106,6 +123,29 @@ const mergeSharedGardenData = (
     const baseItems = asArray<WorkspaceRecord>(base[key]);
     const sharedItems = forWorkspace(asArray<WorkspaceRecord>(shared[key]), workspaceId);
     (next as Record<string, unknown>)[key] = [...withoutWorkspace(baseItems, workspaceId), ...sharedItems];
+  }
+  return next;
+};
+
+const mergeSharedGardenPayload = (
+  existing: Partial<GardenData>,
+  incoming: Partial<GardenData>,
+  workspaceId: string,
+): Partial<GardenData> => {
+  const next: Partial<GardenData> = {};
+  next.members = mergeById(asArray(existing.members), asArray(incoming.members));
+  next.workspaces = mergeWorkspacesById(asArray(existing.workspaces), asArray(incoming.workspaces));
+  for (const key of workspaceScopedKeys) {
+    (next as Record<string, unknown>)[key] = mergeById(
+      forWorkspace(asArray<WorkspaceRecord & IdRecord>(existing[key]), workspaceId),
+      forWorkspace(asArray<WorkspaceRecord & IdRecord>(incoming[key]), workspaceId),
+    );
+  }
+  for (const key of relationScopedKeys) {
+    (next as Record<string, unknown>)[key] = mergeById(
+      forWorkspace(asArray<WorkspaceRecord & IdRecord>(existing[key]), workspaceId),
+      forWorkspace(asArray<WorkspaceRecord & IdRecord>(incoming[key]), workspaceId),
+    );
   }
   return next;
 };
@@ -164,18 +204,42 @@ export const supabaseSharedGardenAdapter = ({
     async save(value) {
       await personalAdapter.save(value);
       const memberships = await loadSharedMemberships(client, userId);
-      await Promise.all(memberships.map((membership) =>
-        client
+      await Promise.all(memberships.map(async (membership) => {
+        const outgoing = extractSharedGardenData(value, membership.workspace_id);
+        const { data: existingRow, error: loadError } = await client
           .from("shared_garden_data")
-          .update({
-            data: extractSharedGardenData(value, membership.workspace_id),
-            updated_at: new Date().toISOString(),
-          })
+          .select("workspace_id, data")
           .eq("workspace_id", membership.workspace_id)
-          .then(({ error }) => {
-            if (error) throw error;
-          }),
-      ));
+          .maybeSingle();
+        if (loadError) throw loadError;
+        const data = mergeSharedGardenPayload(
+          ((existingRow as SharedGardenDataRow | null)?.data ?? {}) as Partial<GardenData>,
+          outgoing,
+          membership.workspace_id,
+        );
+        const workspace = asArray<WorkspaceItem>(data.workspaces).find((item) => item.id === membership.workspace_id);
+        if (existingRow) {
+          const { error } = await client
+            .from("shared_garden_data")
+            .update({
+              data,
+              name: workspace?.name ?? "Shared Garden",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("workspace_id", membership.workspace_id);
+          if (error) throw error;
+          return;
+        }
+        const { error } = await client
+          .from("shared_garden_data")
+          .insert({
+            workspace_id: membership.workspace_id,
+            name: workspace?.name ?? "Shared Garden",
+            data,
+            created_by: userId,
+          });
+        if (error) throw error;
+      }));
     },
     async clear() {
       await personalAdapter.clear();

@@ -24,6 +24,7 @@ import type {
 import { createContext, type PropsWithChildren, useContext, useEffect, useMemo, useState } from "react";
 
 const DEFAULT_STORAGE_KEY = "garden-os:v1:fresh";
+const SONUM_EMAIL = "so.samra@gmail.com";
 
 export interface GardenContextValue {
   data: GardenData;
@@ -60,14 +61,20 @@ const ensureCollaborationDefaults = (data: GardenData): GardenData => {
     name: data.profile.name || "You",
     avatarInitials: initialsForName(data.profile.name || "You"),
   };
-  const sonumMember = existingMembers.find((member) => member.id === SONUM_MEMBER_ID) ?? {
+  const sonumMember = existingMembers.find((member) =>
+    member.id === SONUM_MEMBER_ID ||
+    member.email?.toLowerCase() === SONUM_EMAIL ||
+    member.name.trim().toLowerCase() === "sonum"
+  ) ?? {
     id: SONUM_MEMBER_ID,
     name: "Sonum",
-    email: "sonum@example.com",
+    email: SONUM_EMAIL,
     avatarInitials: "S",
   };
   const otherMembers = existingMembers.filter((member) => member.id !== primaryMember.id && member.id !== sonumMember.id);
-  const members = [primaryMember, sonumMember, ...otherMembers];
+  const members = sonumMember.id === primaryMember.id
+    ? [primaryMember, ...otherMembers]
+    : [primaryMember, sonumMember, ...otherMembers];
   const privateWorkspace = data.workspaces.find((workspace) => workspace.id === DEFAULT_PRIVATE_WORKSPACE_ID) ?? {
     id: DEFAULT_PRIVATE_WORKSPACE_ID,
     name: "My Garden",
@@ -81,9 +88,10 @@ const ensureCollaborationDefaults = (data: GardenData): GardenData => {
     memberIds: [primaryMemberId, SONUM_MEMBER_ID],
   };
   const otherWorkspaces = data.workspaces.filter((workspace) => workspace.id !== privateWorkspace.id && workspace.id !== sharedWorkspace.id);
+  const sharedMemberIds = [...new Set([primaryMemberId, sonumMember.id, ...sharedWorkspace.memberIds])];
   const workspaces = [
     { ...privateWorkspace, memberIds: [primaryMemberId] },
-    { ...sharedWorkspace, memberIds: [...new Set([primaryMemberId, SONUM_MEMBER_ID, ...sharedWorkspace.memberIds])] },
+    { ...sharedWorkspace, memberIds: sharedMemberIds },
     ...otherWorkspaces,
   ];
   const withObjectMeta = <T extends { workspaceId?: string; visibility?: ObjectVisibility; createdBy?: string }>(items: T[]) =>
