@@ -1,4 +1,5 @@
 import {
+  DEFAULT_MEMBER_ID,
   DEFAULT_PRIVATE_WORKSPACE_ID,
   DEFAULT_SHARED_WORKSPACE_ID,
   SONUM_MEMBER_ID,
@@ -25,6 +26,7 @@ import { createContext, type PropsWithChildren, useContext, useEffect, useMemo, 
 
 const DEFAULT_STORAGE_KEY = "garden-os:v1:fresh";
 const SONUM_EMAIL = "so.samra@gmail.com";
+const LEGACY_MEMBER_IDS = new Set([DEFAULT_MEMBER_ID, "new-user", SONUM_MEMBER_ID]);
 
 export interface GardenContextValue {
   data: GardenData;
@@ -61,17 +63,25 @@ const ensureCollaborationDefaults = (data: GardenData): GardenData => {
     name: data.profile.name || "You",
     avatarInitials: initialsForName(data.profile.name || "You"),
   };
-  const sonumMember = existingMembers.find((member) =>
-    member.id === SONUM_MEMBER_ID ||
-    member.email?.toLowerCase() === SONUM_EMAIL ||
-    member.name.trim().toLowerCase() === "sonum"
-  ) ?? {
+  const realSonumMember = existingMembers.find((member) => member.email?.toLowerCase() === SONUM_EMAIL);
+  const fallbackSonumMember = existingMembers.find((member) =>
+    member.id === SONUM_MEMBER_ID || member.name.trim().toLowerCase() === "sonum"
+  );
+  const sonumMember = realSonumMember ?? fallbackSonumMember ?? {
     id: SONUM_MEMBER_ID,
     name: "Sonum",
     email: SONUM_EMAIL,
     avatarInitials: "S",
   };
-  const otherMembers = existingMembers.filter((member) => member.id !== primaryMember.id && member.id !== sonumMember.id);
+  const legacyMemberIdsToDrop = new Set<string>();
+  for (const memberId of LEGACY_MEMBER_IDS) {
+    if (memberId !== primaryMember.id && memberId !== sonumMember.id) legacyMemberIdsToDrop.add(memberId);
+  }
+  const otherMembers = existingMembers.filter((member) =>
+    member.id !== primaryMember.id &&
+    member.id !== sonumMember.id &&
+    !legacyMemberIdsToDrop.has(member.id)
+  );
   const members = sonumMember.id === primaryMember.id
     ? [primaryMember, ...otherMembers]
     : [primaryMember, sonumMember, ...otherMembers];
@@ -88,7 +98,8 @@ const ensureCollaborationDefaults = (data: GardenData): GardenData => {
     memberIds: [primaryMemberId, SONUM_MEMBER_ID],
   };
   const otherWorkspaces = data.workspaces.filter((workspace) => workspace.id !== privateWorkspace.id && workspace.id !== sharedWorkspace.id);
-  const sharedMemberIds = [...new Set([primaryMemberId, sonumMember.id, ...sharedWorkspace.memberIds])];
+  const sharedMemberIds = [...new Set([primaryMemberId, sonumMember.id, ...sharedWorkspace.memberIds])]
+    .filter((memberId) => !legacyMemberIdsToDrop.has(memberId));
   const workspaces = [
     { ...privateWorkspace, memberIds: [primaryMemberId] },
     { ...sharedWorkspace, memberIds: sharedMemberIds },

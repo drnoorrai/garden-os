@@ -18,11 +18,13 @@ export const AppShell = ({ children }: PropsWithChildren) => {
   const auth = useAuth();
   const { activeWorkspace, activeWorkspaceId, data, setActiveWorkspaceId, syncError, syncStatus } = useGarden();
   const accountLabel = auth.user?.email ?? (auth.enabled ? "Signed in" : "Local mode");
-  const activeMembers = activeWorkspace.memberIds
+  const activeMembersById = new Map(activeWorkspace.memberIds
     .map((memberId) => data.members.find((member) => member.id === memberId))
-    .filter(Boolean);
+    .filter((member): member is NonNullable<typeof member> => Boolean(member))
+    .map((member) => [member.id, member]));
+  const activeMembers = [...activeMembersById.values()];
   const partnerNames = activeMembers.map((member) => member?.name).join(" + ");
-  const partnerEmails = activeMembers.map((member) => member?.email).filter(Boolean).join(", ");
+  const partnerEmails = [...new Set(activeMembers.map((member) => member?.email).filter(Boolean))].join(", ");
   const syncLabel = auth.enabled && auth.user
     ? syncStatus === "synced"
       ? "Synced across devices"

@@ -93,7 +93,7 @@ const mergeWorkspacesById = (base: WorkspaceItem[] = [], incoming: WorkspaceItem
       ? {
         ...existing,
         ...workspace,
-        memberIds: [...new Set([...(existing.memberIds ?? []), ...(workspace.memberIds ?? [])])],
+        memberIds: workspace.memberIds?.length ? workspace.memberIds : existing.memberIds,
       }
       : workspace);
   }

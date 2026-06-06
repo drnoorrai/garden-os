@@ -164,7 +164,7 @@ export const createSeedData = (date = todayKey()): GardenData => ({
     {
       id: SONUM_MEMBER_ID,
       name: "Sonum",
-      email: "sonum@example.com",
+      email: "so.samra@gmail.com",
       avatarInitials: "S",
     },
   ],
@@ -576,7 +576,7 @@ export const createFreshData = (date = todayKey()): GardenData => {
       {
         id: SONUM_MEMBER_ID,
         name: "Sonum",
-        email: "sonum@example.com",
+        email: "so.samra@gmail.com",
         avatarInitials: "S",
       },
     ],
