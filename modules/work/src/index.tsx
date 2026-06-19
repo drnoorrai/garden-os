@@ -1,7 +1,7 @@
 import { ModuleHeader, ModuleTabs } from "@garden/design-system";
 import { DEFAULT_PRIVATE_WORKSPACE_ID, DEFAULT_SHARED_WORKSPACE_ID, SONUM_MEMBER_ID, createId, objectPath, todayKey } from "@garden/domain";
 import { captureUniversalItem, useGarden } from "@garden/shared-state";
-import type { ContentFormat, GardenMember, ObjectRef, PartnerSharingLevel, RelationshipKind, RelationshipNoteKind, RelationshipRecord, RelationshipStage, TaskGardenItem, TaskGardenZone, TriageAction, WorkItem, WorkItemKind } from "@garden/types";
+import type { ContentFormat, GardenMember, PartnerSharingLevel, RelationshipKind, RelationshipNoteKind, RelationshipRecord, RelationshipStage, TaskGardenItem, TaskGardenZone, TriageAction, WorkItem, WorkItemKind } from "@garden/types";
 import { Button, Card, cn, Input, Label, Pill, SectionHeading, Textarea } from "@garden/ui";
 import { ArrowRight, Building2, ExternalLink, GripVertical, MessageSquare, Plus, Trash2, UserRound } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -13,6 +13,7 @@ const tabs = [
   { to: "/think/relationships", label: "Relationships" },
   { to: "/think/task-garden", label: "Task Garden" },
   { to: "/think/clarity", label: "Clarity" },
+  { to: "/think/settings", label: "Settings" },
 ];
 
 const belongsToWorkspace = (workspaceId: string, item: { workspaceId?: string }) =>
@@ -44,6 +45,7 @@ export const WorkRoutes = () => {
         <Route path="relationships" element={<RelationshipsStudio />} />
         <Route path="task-garden" element={<TaskGarden />} />
         <Route path="clarity" element={<Clarity />} />
+        <Route path="settings" element={<ThinkSettings />} />
         <Route path="prioritize" element={<Navigate replace to="/think" />} />
         <Route path="bets" element={<Navigate replace to="/think" />} />
         <Route path="execute" element={<Navigate replace to="/think/task-garden" />} />
@@ -58,7 +60,7 @@ export const WorkRoutes = () => {
 const InboxPanel = () => {
   const { activeWorkspace, activeWorkspaceId, currentMemberId, data, update } = useGarden();
   const [title, setTitle] = useState("");
-  const [kind, setKind] = useState<WorkItemKind>("task");
+  const [kind, setKind] = useState<WorkItemKind>("idea");
   const actions: TriageAction[] = ["do-now", "defer", "delegate", "delete"];
   const inboxItems = data.workItems.filter((item) => belongsToWorkspace(activeWorkspaceId, item) && item.triage !== "delete");
   return (
@@ -76,7 +78,7 @@ const InboxPanel = () => {
           setTitle("");
         }}>
           <div><Label htmlFor="capture">What has your attention?</Label><Textarea id="capture" rows={4} value={title} onChange={(event) => setTitle(event.target.value)} /></div>
-          <select value={kind} onChange={(event) => setKind(event.target.value as WorkItemKind)} className="h-11 w-full rounded-xl border border-ink/8 bg-white px-3 text-sm"><option value="task">Task</option><option value="idea">Idea</option><option value="thought">Thought</option><option value="obligation">Obligation</option><option value="content">Content</option><option value="person">Person</option><option value="company">Company</option></select>
+          <select value={kind} onChange={(event) => setKind(event.target.value as WorkItemKind)} className="h-11 w-full rounded-xl border border-ink/8 bg-white px-3 text-sm"><option value="idea">Idea</option><option value="task">Task</option><option value="thought">Thought</option><option value="obligation">Obligation</option><option value="content">Content</option><option value="person">Person</option><option value="company">Company</option></select>
           <Button type="submit" className="w-full">Capture</Button>
         </form>
         <p className="mt-5 rounded-xl bg-mist/55 p-4 text-sm text-muted">People and companies route to Relationships. If a task takes less than 2 minutes, do it now.</p>
@@ -633,7 +635,7 @@ const taskGardenZones: Array<{ id: TaskGardenZone; label: string; guidance: stri
 ];
 
 const TaskGarden = () => {
-  const { activeWorkspace, activeWorkspaceId, currentMemberId, data, update } = useGarden();
+  const { currentMemberId, data, update } = useGarden();
   const [title, setTitle] = useState("");
   const [zone, setZone] = useState<TaskGardenZone>("develop");
   const [assignment, setAssignment] = useState("both");
@@ -673,14 +675,6 @@ const TaskGarden = () => {
     if (memberIds.length > 0 && memberIds.every((memberId) => assigneeIds.includes(memberId))) return "Both";
     return assigneeIds.map(memberName).join(", ");
   };
-  const objectTitle = (ref?: ObjectRef) => {
-    if (!ref) return null;
-    if (ref.kind === "person" || ref.kind === "company") return data.relationships.find((record) => record.id === ref.id)?.name ?? null;
-    if (ref.kind === "content") return data.workItems.find((item) => item.id === ref.id)?.title ?? null;
-    if (ref.kind === "note") return data.fieldNotes.find((note) => note.id === ref.id)?.title ?? null;
-    return data.sources.find((source) => source.id === ref.id)?.title ?? null;
-  };
-
   const updateItem = (id: string, change: Partial<TaskGardenItem>) =>
     update((current) => ({
       ...current,
@@ -698,59 +692,11 @@ const TaskGarden = () => {
     });
   };
 
-  const createContentIdea = (item: TaskGardenItem) => {
-    const id = createId();
-    const ref: ObjectRef = { kind: "content", id };
-    const createdAt = new Date().toISOString();
+  const deleteItem = (id: string) =>
     update((current) => ({
       ...current,
-      workItems: [
-        {
-          id,
-          createdAt,
-          title: item.title,
-          kind: "content",
-          triage: "untriaged",
-          contentStage: "seed",
-          contentFormat: "post",
-          audience: "Creators and operators",
-          hook: item.notes ?? item.title,
-          workspaceId: activeWorkspaceId,
-          visibility: activeWorkspace.kind === "shared" ? "shared" : "private",
-          createdBy: currentMemberId,
-        },
-        ...current.workItems,
-      ],
-      taskGardenItems: current.taskGardenItems.map((card) =>
-        card.id === item.id ? { ...card, objectRef: ref, updatedAt: createdAt } : card,
-      ),
-      objectRelations: item.objectRef
-        ? [
-          {
-            id: createId(),
-            from: item.objectRef,
-            to: ref,
-            label: "inspired-by",
-            workspaceId: activeWorkspaceId,
-          },
-          ...current.objectRelations,
-        ]
-        : current.objectRelations,
-      objectActivity: [
-        {
-          id: createId(),
-          object: ref,
-          createdAt,
-          action: "Created from Task Garden",
-          detail: item.title,
-          workspaceId: activeWorkspaceId,
-          visibility: activeWorkspace.kind === "shared" ? "shared" : "private",
-          createdBy: currentMemberId,
-        },
-        ...current.objectActivity,
-      ],
+      taskGardenItems: current.taskGardenItems.filter((item) => item.id !== id),
     }));
-  };
 
   return (
     <div className="space-y-6">
@@ -825,7 +771,6 @@ const TaskGarden = () => {
               </div>
               <div className="space-y-3">
                 {columnItems.map((item) => {
-                  const titleForObject = objectTitle(item.objectRef);
                   return (
                     <div
                       key={item.id}
@@ -842,18 +787,7 @@ const TaskGarden = () => {
                           </p>
                         </div>
                       </div>
-                      {item.objectRef && titleForObject ? (
-                        <RouterLink to={objectPath(item.objectRef)} className="mt-3 inline-flex text-xs font-medium text-forest hover:underline">
-                          Open object: {titleForObject}
-                        </RouterLink>
-                      ) : null}
-                      <Textarea
-                        className="mt-3 min-h-20 bg-white/80"
-                        value={item.notes ?? ""}
-                        onChange={(event) => updateItem(item.id, { notes: event.target.value })}
-                        placeholder="Notes, Sonum comments, hooks, angles or context..."
-                      />
-                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
                         <select
                           aria-label={`Assign ${item.title}`}
                           value={memberIds.length > 0 && memberIds.every((memberId) => (item.assigneeIds ?? (item.ownerId ? [item.ownerId] : [])).includes(memberId))
@@ -876,12 +810,16 @@ const TaskGarden = () => {
                         >
                           {taskGardenZones.map((entry) => <option key={entry.id} value={entry.id}>{entry.label}</option>)}
                         </select>
-                      </div>
-                      {item.objectRef?.kind !== "content" ? (
-                        <Button variant="secondary" className="mt-3 h-8 min-h-8 px-3 text-xs" onClick={() => createContentIdea(item)}>
-                          Create content idea
+                        <Button
+                          aria-label={`Delete ${item.title}`}
+                          className="h-9 min-h-9 px-3 text-xs"
+                          onClick={() => deleteItem(item.id)}
+                          type="button"
+                          variant="danger"
+                        >
+                          <Trash2 size={14} /> Done
                         </Button>
-                      ) : null}
+                      </div>
                     </div>
                   );
                 })}
@@ -894,6 +832,14 @@ const TaskGarden = () => {
         })}
       </div>
 
+    </div>
+  );
+};
+
+const ThinkSettings = () => {
+  const { data, update } = useGarden();
+  return (
+    <div className="space-y-6">
       <Card className="p-6">
         <SectionHeading
           title="Couple Sharing"
@@ -928,6 +874,6 @@ const TaskGarden = () => {
           ))}
         </div>
       </Card>
-	    </div>
-	  );
-	};
+    </div>
+  );
+};
