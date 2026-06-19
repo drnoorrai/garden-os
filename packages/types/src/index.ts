@@ -23,6 +23,10 @@ export type WorkspaceKind = "private" | "shared";
 export type WorkspaceRole = "owner" | "partner";
 export type ObjectVisibility = "private" | "shared";
 export type TaskGardenZone = "do-now" | "develop" | "ask-delegate";
+export type PartnerSharingSurface = "task-garden" | "train" | "eat" | "content" | "relationships" | "clarity";
+export type PartnerSharingLevel = "private" | "summary" | "shared";
+export type NutritionUnit = "g" | "ml" | "scoop" | "unit" | "serving";
+export type MealSlot = "breakfast" | "lunch" | "dinner" | "snack" | "peri-workout";
 
 export interface ObjectWorkspaceFields {
   workspaceId?: string;
@@ -196,13 +200,22 @@ export interface TaskGardenItem {
   id: string;
   objectRef?: ObjectRef;
   workspaceId: string;
+  visibility?: ObjectVisibility;
   zone: TaskGardenZone;
   title: string;
   notes?: string;
   ownerId?: string;
+  assigneeIds?: string[];
   createdBy: string;
   createdAt: string;
   updatedAt?: string;
+}
+
+export interface PartnerSharingSetting {
+  id: PartnerSharingSurface;
+  label: string;
+  description: string;
+  level: PartnerSharingLevel;
 }
 
 export interface ObjectComment {
@@ -299,11 +312,83 @@ export interface TrainingState {
   activeSessionId?: string;
 }
 
+export interface MacroBreakdown {
+  calories: number;
+  proteinGrams: number;
+  carbsGrams: number;
+  fatGrams: number;
+  fiberGrams: number;
+  sodiumMg: number;
+}
+
+export interface NutritionSettings {
+  bmrCalories: number;
+  calorieTarget: number;
+  proteinTargetGrams: number;
+  carbsTargetGrams: number;
+  fatTargetGrams: number;
+  fiberTargetGrams: number;
+  sodiumLimitMg: number;
+  activityCalories: number;
+  wearableAdjustmentCalories?: number;
+}
+
+export interface FoodPreset {
+  id: string;
+  name: string;
+  category: "protein" | "carb" | "fat" | "supplement" | "sauce" | "other";
+  unit: NutritionUnit;
+  baseQuantity: number;
+  servingLabel: string;
+  macros: MacroBreakdown;
+  custom?: boolean;
+}
+
+export interface RecipeIngredient {
+  id: string;
+  foodId: string;
+  quantity: number;
+  note?: string;
+}
+
+export interface RecipePreset {
+  id: string;
+  name: string;
+  mealSlot: MealSlot;
+  ingredients: RecipeIngredient[];
+  notes?: string;
+  custom?: boolean;
+}
+
+export interface MealLogItem {
+  id: string;
+  foodId?: string;
+  name: string;
+  quantity: number;
+  unit: NutritionUnit;
+  servingLabel: string;
+  macros: MacroBreakdown;
+}
+
+export interface NutritionState {
+  settings: NutritionSettings;
+  foods: FoodPreset[];
+  recipes: RecipePreset[];
+  deletedFoodIds?: string[];
+  deletedRecipeIds?: string[];
+}
+
 export interface MealEntry {
   id: string;
   date: string;
   name: string;
   proteinGrams: number;
+  mealSlot?: MealSlot;
+  calories?: number;
+  macros?: MacroBreakdown;
+  items?: MealLogItem[];
+  source?: "manual" | "recipe" | "composer";
+  recipeId?: string;
 }
 
 export interface MealPlan {
@@ -405,6 +490,14 @@ export interface EatTodaySummary {
   module: "eat";
   proteinTarget: number;
   proteinLogged: number;
+  calorieTarget: number;
+  caloriesLogged: number;
+  carbsLogged: number;
+  fatLogged: number;
+  fiberLogged: number;
+  sodiumLogged: number;
+  estimatedMaintenance: number;
+  estimatedDeficit: number;
   hydrationComplete: boolean;
   energySupport: string;
 }
@@ -429,10 +522,12 @@ export interface GardenData {
   objectNextActions: ObjectNextAction[];
   taskGardenItems: TaskGardenItem[];
   objectComments: ObjectComment[];
+  partnerSharingSettings: PartnerSharingSetting[];
   bets: Bet[];
   kanbanCards: KanbanCard[];
   training: TrainingEntry[];
   train: TrainingState;
+  nutrition: NutritionState;
   meals: MealEntry[];
   mealPlans: MealPlan[];
   groceries: GroceryItem[];

@@ -67,7 +67,7 @@ export const ReviewPage = () => {
           </label>
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button type="submit" className="flex-1">Save review</Button>
-            <Link to="/work" className="inline-flex min-h-10 items-center justify-center rounded-full px-4 text-sm text-muted">Back to Work</Link>
+            <Link to="/think" className="inline-flex min-h-10 items-center justify-center rounded-full px-4 text-sm text-muted">Back to Think</Link>
           </div>
         </form>
       </Card>

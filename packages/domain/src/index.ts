@@ -1,4 +1,4 @@
-import type { Bet, DailyPlan, DailyTask, GardenData, TaskTier } from "@garden/types";
+import type { Bet, DailyPlan, DailyTask, FoodPreset, GardenData, MovementExercise, NutritionState, PartnerSharingSetting, RecipePreset, TaskTier, WorkoutTemplate } from "@garden/types";
 
 export * from "./objects";
 
@@ -22,6 +22,184 @@ export const DEFAULT_MEMBER_ID = "noor";
 export const SONUM_MEMBER_ID = "sonum";
 export const DEFAULT_PRIVATE_WORKSPACE_ID = "workspace-my-garden";
 export const DEFAULT_SHARED_WORKSPACE_ID = "workspace-noor-sonum";
+
+export const defaultTrainingExercises: MovementExercise[] = [
+  { id: "incline_smith_press", name: "Incline Smith press", contributions: { chest: 1, side_delts: 0.25, triceps: 0.5 } },
+  { id: "incline_db_press", name: "Incline dumbbell press", contributions: { chest: 1, side_delts: 0.25, triceps: 0.5 } },
+  { id: "flat_smith_press", name: "Flat Smith press", contributions: { chest: 1, triceps: 0.5 } },
+  { id: "assisted_dip", name: "Assisted dip", contributions: { chest: 1, triceps: 0.75 } },
+  { id: "low_to_high_cable_fly", name: "Low-to-high cable fly", contributions: { chest: 1 } },
+  { id: "cable_lateral_raise", name: "Cable lateral raise", contributions: { side_delts: 1 } },
+  { id: "overhead_cable_triceps_extension", name: "Overhead cable triceps extension", contributions: { triceps: 1 } },
+  { id: "rope_triceps_pushdown", name: "Rope triceps pushdown", contributions: { triceps: 1 } },
+  { id: "assisted_pullup", name: "Assisted pull-up", contributions: { lats: 1, biceps: 0.5, mid_back: 0.5 } },
+  { id: "lat_pulldown", name: "Lat pulldown", contributions: { lats: 1, biceps: 0.5, mid_back: 0.25 } },
+  { id: "seated_row_machine", name: "Seated row machine", contributions: { mid_back: 1, lats: 0.5, biceps: 0.5 } },
+  { id: "straight_arm_cable_pulldown", name: "Straight-arm cable pulldown", contributions: { lats: 1 } },
+  { id: "cable_rear_delt_fly", name: "Cable rear delt fly", contributions: { mid_back: 0.75, side_delts: 0.25 } },
+  { id: "face_pull", name: "Face pull", contributions: { mid_back: 0.75, side_delts: 0.25 } },
+  { id: "incline_db_curl", name: "Incline dumbbell curl", contributions: { biceps: 1 } },
+  { id: "rope_hammer_curl", name: "Rope hammer curl", contributions: { biceps: 0.75 } },
+  { id: "hack_squat", name: "Hack squat", contributions: { quads: 1, glutes: 0.5 } },
+  { id: "smith_split_squat", name: "Smith split squat", contributions: { quads: 1, glutes: 0.5 } },
+  { id: "db_romanian_deadlift", name: "Dumbbell Romanian deadlift", contributions: { hamstrings: 1, glutes: 0.5 } },
+  { id: "smith_romanian_deadlift", name: "Smith Romanian deadlift", contributions: { hamstrings: 1, glutes: 0.5 } },
+  { id: "smith_hip_thrust", name: "Smith hip thrust", contributions: { glutes: 1, hamstrings: 0.25 } },
+  { id: "high_foot_hack_squat", name: "High-foot hack squat", contributions: { quads: 0.75, glutes: 0.75, hamstrings: 0.25 } },
+  { id: "cable_hamstring_curl", name: "Cable hamstring curl", contributions: { hamstrings: 1 } },
+  { id: "cable_hip_adduction", name: "Cable hip adduction", contributions: { quads: 0.25, glutes: 0.25 } },
+  { id: "cable_hip_abduction", name: "Cable hip abduction", contributions: { glutes: 0.75 } },
+  { id: "standing_smith_calf_raise", name: "Standing Smith calf raise", contributions: { calves: 1 } },
+  { id: "seated_db_calf_raise", name: "Seated dumbbell calf raise", contributions: { calves: 1 } },
+  { id: "cable_crunch", name: "Cable crunch", contributions: { abs: 1 } },
+  { id: "pallof_press", name: "Pallof press", contributions: { abs: 0.5 } },
+  { id: "reverse_crunch", name: "Reverse crunch", contributions: { abs: 1 } },
+  { id: "cable_woodchop", name: "Cable woodchop", contributions: { abs: 0.75 } },
+  { id: "dumbbell_shoulder_press", name: "Dumbbell shoulder press", contributions: { side_delts: 0.5, triceps: 0.5 } },
+  { id: "dumbbell_shrug", name: "Dumbbell shrug", contributions: { mid_back: 0.5 } },
+  { id: "cable_curl", name: "Cable curl", contributions: { biceps: 1 } },
+];
+
+export const defaultTrainingTemplates: WorkoutTemplate[] = [
+  {
+    id: "cut-5-day-push-push-a",
+    name: "Cut - 5 Day Push: Push A",
+    exercises: [
+      { exerciseId: "incline_smith_press", targetSets: 3 },
+      { exerciseId: "flat_smith_press", targetSets: 2 },
+      { exerciseId: "assisted_dip", targetSets: 2 },
+      { exerciseId: "low_to_high_cable_fly", targetSets: 2 },
+      { exerciseId: "cable_lateral_raise", targetSets: 3 },
+      { exerciseId: "overhead_cable_triceps_extension", targetSets: 2 },
+      { exerciseId: "rope_triceps_pushdown", targetSets: 2 },
+    ],
+  },
+  {
+    id: "cut-5-day-push-pull-a",
+    name: "Cut - 5 Day Push: Pull A",
+    exercises: [
+      { exerciseId: "assisted_pullup", targetSets: 3 },
+      { exerciseId: "lat_pulldown", targetSets: 3 },
+      { exerciseId: "seated_row_machine", targetSets: 3 },
+      { exerciseId: "straight_arm_cable_pulldown", targetSets: 2 },
+      { exerciseId: "cable_rear_delt_fly", targetSets: 3 },
+      { exerciseId: "face_pull", targetSets: 2 },
+      { exerciseId: "incline_db_curl", targetSets: 2 },
+      { exerciseId: "rope_hammer_curl", targetSets: 2 },
+    ],
+  },
+  {
+    id: "cut-5-day-push-legs-a",
+    name: "Cut - 5 Day Push: Legs A",
+    exercises: [
+      { exerciseId: "hack_squat", targetSets: 4 },
+      { exerciseId: "smith_split_squat", targetSets: 3 },
+      { exerciseId: "db_romanian_deadlift", targetSets: 3 },
+      { exerciseId: "cable_hip_adduction", targetSets: 2 },
+      { exerciseId: "standing_smith_calf_raise", targetSets: 4 },
+      { exerciseId: "cable_crunch", targetSets: 3 },
+      { exerciseId: "pallof_press", targetSets: 2 },
+    ],
+  },
+  {
+    id: "cut-5-day-push-upper-b",
+    name: "Cut - 5 Day Push: Upper B",
+    exercises: [
+      { exerciseId: "incline_db_press", targetSets: 3 },
+      { exerciseId: "assisted_dip", targetSets: 2 },
+      { exerciseId: "lat_pulldown", targetSets: 3 },
+      { exerciseId: "seated_row_machine", targetSets: 3 },
+      { exerciseId: "dumbbell_shoulder_press", targetSets: 2 },
+      { exerciseId: "cable_lateral_raise", targetSets: 3 },
+      { exerciseId: "dumbbell_shrug", targetSets: 2 },
+      { exerciseId: "cable_curl", targetSets: 2 },
+      { exerciseId: "rope_triceps_pushdown", targetSets: 2 },
+    ],
+  },
+  {
+    id: "cut-5-day-push-lower-b",
+    name: "Cut - 5 Day Push: Lower B",
+    exercises: [
+      { exerciseId: "smith_romanian_deadlift", targetSets: 3 },
+      { exerciseId: "smith_hip_thrust", targetSets: 3 },
+      { exerciseId: "high_foot_hack_squat", targetSets: 3 },
+      { exerciseId: "cable_hamstring_curl", targetSets: 2 },
+      { exerciseId: "cable_hip_abduction", targetSets: 2 },
+      { exerciseId: "seated_db_calf_raise", targetSets: 4 },
+      { exerciseId: "reverse_crunch", targetSets: 2 },
+      { exerciseId: "cable_woodchop", targetSets: 2 },
+    ],
+  },
+  {
+    id: "lean-bulk-5-day-growth-push-a",
+    name: "Lean Bulk - 5 Day Growth: Push A",
+    exercises: [
+      { exerciseId: "incline_smith_press", targetSets: 4 },
+      { exerciseId: "flat_smith_press", targetSets: 2 },
+      { exerciseId: "assisted_dip", targetSets: 2 },
+      { exerciseId: "low_to_high_cable_fly", targetSets: 3 },
+      { exerciseId: "cable_lateral_raise", targetSets: 4 },
+      { exerciseId: "overhead_cable_triceps_extension", targetSets: 2 },
+      { exerciseId: "rope_triceps_pushdown", targetSets: 2 },
+    ],
+  },
+  {
+    id: "lean-bulk-5-day-growth-pull-a",
+    name: "Lean Bulk - 5 Day Growth: Pull A",
+    exercises: [
+      { exerciseId: "assisted_pullup", targetSets: 3 },
+      { exerciseId: "lat_pulldown", targetSets: 4 },
+      { exerciseId: "seated_row_machine", targetSets: 4 },
+      { exerciseId: "straight_arm_cable_pulldown", targetSets: 2 },
+      { exerciseId: "cable_rear_delt_fly", targetSets: 3 },
+      { exerciseId: "face_pull", targetSets: 2 },
+      { exerciseId: "incline_db_curl", targetSets: 3 },
+      { exerciseId: "rope_hammer_curl", targetSets: 2 },
+    ],
+  },
+  {
+    id: "lean-bulk-5-day-growth-legs-a",
+    name: "Lean Bulk - 5 Day Growth: Legs A",
+    exercises: [
+      { exerciseId: "hack_squat", targetSets: 5 },
+      { exerciseId: "smith_split_squat", targetSets: 3 },
+      { exerciseId: "db_romanian_deadlift", targetSets: 3 },
+      { exerciseId: "cable_hip_adduction", targetSets: 2 },
+      { exerciseId: "standing_smith_calf_raise", targetSets: 5 },
+      { exerciseId: "cable_crunch", targetSets: 3 },
+      { exerciseId: "pallof_press", targetSets: 2 },
+    ],
+  },
+  {
+    id: "lean-bulk-5-day-growth-upper-b",
+    name: "Lean Bulk - 5 Day Growth: Upper B",
+    exercises: [
+      { exerciseId: "incline_db_press", targetSets: 4 },
+      { exerciseId: "assisted_dip", targetSets: 2 },
+      { exerciseId: "lat_pulldown", targetSets: 4 },
+      { exerciseId: "seated_row_machine", targetSets: 4 },
+      { exerciseId: "dumbbell_shoulder_press", targetSets: 2 },
+      { exerciseId: "cable_lateral_raise", targetSets: 3 },
+      { exerciseId: "dumbbell_shrug", targetSets: 2 },
+      { exerciseId: "cable_curl", targetSets: 2 },
+      { exerciseId: "rope_triceps_pushdown", targetSets: 2 },
+    ],
+  },
+  {
+    id: "lean-bulk-5-day-growth-lower-b",
+    name: "Lean Bulk - 5 Day Growth: Lower B",
+    exercises: [
+      { exerciseId: "smith_romanian_deadlift", targetSets: 3 },
+      { exerciseId: "smith_hip_thrust", targetSets: 4 },
+      { exerciseId: "high_foot_hack_squat", targetSets: 3 },
+      { exerciseId: "cable_hamstring_curl", targetSets: 3 },
+      { exerciseId: "cable_hip_abduction", targetSets: 2 },
+      { exerciseId: "seated_db_calf_raise", targetSets: 4 },
+      { exerciseId: "reverse_crunch", targetSets: 2 },
+      { exerciseId: "cable_woodchop", targetSets: 2 },
+    ],
+  },
+];
 
 export const capacityForTier: Record<TaskTier, number> = {
   big: 1,
@@ -129,6 +307,175 @@ export const categorizeBet = (bet: Bet) => {
   if (bet.impact <= 2 && bet.effort <= 2) return "Fill-ins";
   return "Hard Slogs";
 };
+
+export const defaultNutritionFoods: FoodPreset[] = [
+  {
+    id: "bcaa-scoop",
+    name: "BCAA scoop in water",
+    category: "supplement",
+    unit: "scoop",
+    baseQuantity: 1,
+    servingLabel: "scoop",
+    macros: { calories: 10, proteinGrams: 0, carbsGrams: 0, fatGrams: 0, fiberGrams: 0, sodiumMg: 0 },
+  },
+  {
+    id: "egg-white",
+    name: "Egg white",
+    category: "protein",
+    unit: "unit",
+    baseQuantity: 1,
+    servingLabel: "white",
+    macros: { calories: 17, proteinGrams: 3.6, carbsGrams: 0.2, fatGrams: 0, fiberGrams: 0, sodiumMg: 55 },
+  },
+  {
+    id: "egg-yolk",
+    name: "Egg yolk",
+    category: "fat",
+    unit: "unit",
+    baseQuantity: 1,
+    servingLabel: "yolk",
+    macros: { calories: 55, proteinGrams: 2.7, carbsGrams: 0.6, fatGrams: 4.5, fiberGrams: 0, sodiumMg: 8 },
+  },
+  {
+    id: "chicken-breast-cooked",
+    name: "Chicken breast, cooked",
+    category: "protein",
+    unit: "g",
+    baseQuantity: 100,
+    servingLabel: "100g",
+    macros: { calories: 165, proteinGrams: 31, carbsGrams: 0, fatGrams: 3.6, fiberGrams: 0, sodiumMg: 74 },
+  },
+  {
+    id: "jasmine-rice-cooked",
+    name: "Jasmine rice, cooked",
+    category: "carb",
+    unit: "g",
+    baseQuantity: 100,
+    servingLabel: "100g",
+    macros: { calories: 130, proteinGrams: 2.4, carbsGrams: 28, fatGrams: 0.3, fiberGrams: 0.4, sodiumMg: 1 },
+  },
+  {
+    id: "greek-yogurt-0",
+    name: "Greek yogurt 0%",
+    category: "protein",
+    unit: "g",
+    baseQuantity: 100,
+    servingLabel: "100g",
+    macros: { calories: 59, proteinGrams: 10, carbsGrams: 3.6, fatGrams: 0.4, fiberGrams: 0, sodiumMg: 36 },
+  },
+  {
+    id: "bbq-sauce",
+    name: "BBQ sauce",
+    category: "sauce",
+    unit: "g",
+    baseQuantity: 15,
+    servingLabel: "15g",
+    macros: { calories: 30, proteinGrams: 0, carbsGrams: 7, fatGrams: 0, fiberGrams: 0, sodiumMg: 140 },
+  },
+  {
+    id: "peri-peri-sauce",
+    name: "Peri-peri sauce",
+    category: "sauce",
+    unit: "g",
+    baseQuantity: 15,
+    servingLabel: "15g",
+    macros: { calories: 10, proteinGrams: 0, carbsGrams: 1, fatGrams: 0, fiberGrams: 0, sodiumMg: 180 },
+  },
+  {
+    id: "low-cal-garlic-sauce",
+    name: "Low-cal garlic sauce",
+    category: "sauce",
+    unit: "g",
+    baseQuantity: 15,
+    servingLabel: "15g",
+    macros: { calories: 18, proteinGrams: 0.2, carbsGrams: 2, fatGrams: 1, fiberGrams: 0, sodiumMg: 95 },
+  },
+];
+
+export const defaultNutritionRecipes: RecipePreset[] = [
+  {
+    id: "bcaa-water",
+    name: "BCAA water",
+    mealSlot: "peri-workout",
+    ingredients: [{ id: "bcaa-water-scoop", foodId: "bcaa-scoop", quantity: 1 }],
+  },
+  {
+    id: "egg-whites-and-yolks",
+    name: "Egg whites plus yolks",
+    mealSlot: "breakfast",
+    ingredients: [
+      { id: "egg-recipe-whites", foodId: "egg-white", quantity: 4 },
+      { id: "egg-recipe-yolks", foodId: "egg-yolk", quantity: 1 },
+    ],
+  },
+  {
+    id: "chicken-rice-sauce",
+    name: "Chicken, rice and sauce",
+    mealSlot: "lunch",
+    ingredients: [
+      { id: "chicken-rice-chicken", foodId: "chicken-breast-cooked", quantity: 200 },
+      { id: "chicken-rice-rice", foodId: "jasmine-rice-cooked", quantity: 180 },
+      { id: "chicken-rice-sauce", foodId: "peri-peri-sauce", quantity: 20 },
+    ],
+  },
+];
+
+export const defaultNutritionState: NutritionState = {
+  settings: {
+    bmrCalories: 1800,
+    activityCalories: 450,
+    wearableAdjustmentCalories: 0,
+    calorieTarget: 1900,
+    proteinTargetGrams: 180,
+    carbsTargetGrams: 180,
+    fatTargetGrams: 55,
+    fiberTargetGrams: 28,
+    sodiumLimitMg: 2300,
+  },
+  foods: defaultNutritionFoods,
+  recipes: defaultNutritionRecipes,
+  deletedFoodIds: [],
+  deletedRecipeIds: [],
+};
+
+export const defaultPartnerSharingSettings: PartnerSharingSetting[] = [
+  {
+    id: "task-garden",
+    label: "Task Garden",
+    description: "Shared board where either partner can create, assign and move tasks.",
+    level: "shared",
+  },
+  {
+    id: "train",
+    label: "Train",
+    description: "Share training summaries without exposing every private note by default.",
+    level: "summary",
+  },
+  {
+    id: "eat",
+    label: "Eat",
+    description: "Share targets and repeat meals, keep detailed logs optional.",
+    level: "summary",
+  },
+  {
+    id: "content",
+    label: "Content",
+    description: "Keep creative drafts private unless a couple chooses to collaborate there.",
+    level: "private",
+  },
+  {
+    id: "relationships",
+    label: "Relationships",
+    description: "People and companies stay private unless explicitly shared.",
+    level: "private",
+  },
+  {
+    id: "clarity",
+    label: "Clarity",
+    description: "Guided thinking stays private by default.",
+    level: "private",
+  },
+];
 
 const task = (
   title: string,
@@ -433,7 +780,9 @@ export const createSeedData = (date = todayKey()): GardenData => ({
       title: "Turn the podcast timestamp into a post outline",
       notes: "Start with the moment that made Noor pause. Sonum can sharpen the hook.",
       ownerId: DEFAULT_MEMBER_ID,
+      assigneeIds: [DEFAULT_MEMBER_ID],
       createdBy: DEFAULT_MEMBER_ID,
+      visibility: "shared",
       createdAt: date,
     },
     {
@@ -443,7 +792,9 @@ export const createSeedData = (date = todayKey()): GardenData => ({
       title: "Shape a shared content rhythm for the week",
       notes: "Needs shaping: what gets captured, what becomes a post and what stays as reference?",
       ownerId: SONUM_MEMBER_ID,
+      assigneeIds: [SONUM_MEMBER_ID],
       createdBy: SONUM_MEMBER_ID,
+      visibility: "shared",
       createdAt: date,
     },
     {
@@ -454,7 +805,9 @@ export const createSeedData = (date = todayKey()): GardenData => ({
       title: "Ask Sonum for a warmer opening angle",
       notes: "Useful for making the idea sound human before outlining.",
       ownerId: SONUM_MEMBER_ID,
+      assigneeIds: [SONUM_MEMBER_ID],
       createdBy: DEFAULT_MEMBER_ID,
+      visibility: "shared",
       createdAt: date,
     },
   ],
@@ -468,6 +821,7 @@ export const createSeedData = (date = todayKey()): GardenData => ({
       createdAt: date,
     },
   ],
+  partnerSharingSettings: defaultPartnerSharingSettings,
   bets: [
     { id: createId(), title: "Today-first operating loop", notes: "Make morning planning genuinely lighter.", impact: 5, effort: 3, status: "active" },
     { id: createId(), title: "Evening reflection habit", notes: "Tiny loop, meaningful learning.", impact: 4, effort: 2, status: "active" },
@@ -498,29 +852,22 @@ export const createSeedData = (date = todayKey()): GardenData => ({
       { id: "calves", group: "legs", name: "Calves", mev: 8, mav: [12, 16], mrv: 20, recovery: "fast" },
       { id: "abs", group: "core", name: "Abs", mev: 0, mav: [8, 16], mrv: 25, recovery: "fast" },
     ],
-    exercises: [
-      { id: "barbell_bench", name: "Barbell bench press", contributions: { chest: 1, triceps: 0.5 } },
-      { id: "incline_db_press", name: "Incline dumbbell press", contributions: { chest: 1, side_delts: 0.25, triceps: 0.5 } },
-      { id: "lateral_raise", name: "Lateral raise", contributions: { side_delts: 1 } },
-      { id: "tricep_pushdown", name: "Tricep pushdown", contributions: { triceps: 1 } },
-      { id: "pullup", name: "Pull-up", contributions: { lats: 1, biceps: 0.5, mid_back: 0.5 } },
-      { id: "chest_supported_row", name: "Chest-supported row", contributions: { mid_back: 1, lats: 0.5, biceps: 0.5 } },
-      { id: "dumbbell_curl", name: "Dumbbell curl", contributions: { biceps: 1 } },
-      { id: "back_squat", name: "Back squat", contributions: { quads: 1, glutes: 0.5 } },
-      { id: "rdl", name: "Romanian deadlift", contributions: { hamstrings: 1, glutes: 0.5 } },
-      { id: "leg_press", name: "Leg press", contributions: { quads: 1, glutes: 0.5 } },
-      { id: "standing_calf", name: "Standing calf raise", contributions: { calves: 1 } },
-      { id: "cable_crunch", name: "Cable crunch", contributions: { abs: 1 } }
-    ],
+    exercises: defaultTrainingExercises,
     customExercises: [],
     sets: [],
-    templates: [
-      { id: "full-body", name: "Full-body strength", exercises: [{ exerciseId: "back_squat", targetSets: 3 }, { exerciseId: "barbell_bench", targetSets: 3 }, { exerciseId: "chest_supported_row", targetSets: 3 }] },
-      { id: "pull-focus", name: "Pull and posterior", exercises: [{ exerciseId: "rdl", targetSets: 3 }, { exerciseId: "pullup", targetSets: 3 }, { exerciseId: "dumbbell_curl", targetSets: 2 }] }
-    ],
+    templates: defaultTrainingTemplates,
     sessions: [],
   },
-  meals: [{ id: createId(), date, name: "Greek yogurt, berries and seeds", proteinGrams: 28 }],
+  nutrition: defaultNutritionState,
+  meals: [{
+    id: createId(),
+    date,
+    name: "Greek yogurt, berries and seeds",
+    proteinGrams: 28,
+    calories: 310,
+    macros: { calories: 310, proteinGrams: 28, carbsGrams: 30, fatGrams: 8, fiberGrams: 7, sodiumMg: 90 },
+    source: "manual",
+  }],
   mealPlans: [
     { id: createId(), date, meal: "Lemon salmon, warm grains, greens and tahini.", proteinGrams: 42, energySupport: "steady" },
   ],
@@ -619,6 +966,7 @@ export const createFreshData = (date = todayKey()): GardenData => {
     objectNextActions: [],
     taskGardenItems: [],
     objectComments: [],
+    partnerSharingSettings: defaultPartnerSharingSettings,
     bets: [],
     kanbanCards: [],
     training: [],
@@ -628,6 +976,7 @@ export const createFreshData = (date = todayKey()): GardenData => {
       sessions: [],
       activeSessionId: undefined,
     },
+    nutrition: defaultNutritionState,
     meals: [],
     mealPlans: [],
     groceries: [],

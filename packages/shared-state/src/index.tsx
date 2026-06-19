@@ -7,6 +7,8 @@ import {
   createId,
   createSeedData,
   createSourceFromUrl,
+  defaultNutritionState,
+  defaultPartnerSharingSettings,
   getPlan,
   nextDayKey,
   todayKey,
@@ -27,6 +29,7 @@ import { createContext, type PropsWithChildren, useContext, useEffect, useMemo, 
 const DEFAULT_STORAGE_KEY = "garden-os:v1:fresh";
 const SONUM_EMAIL = "so.samra@gmail.com";
 const LEGACY_MEMBER_IDS = new Set([DEFAULT_MEMBER_ID, "new-user", SONUM_MEMBER_ID]);
+const LEGACY_TRAIN_TEMPLATE_IDS = new Set(["full-body", "pull-focus"]);
 
 export interface GardenContextValue {
   data: GardenData;
@@ -77,6 +80,14 @@ const ensureCollaborationDefaults = (data: GardenData): GardenData => {
   for (const memberId of LEGACY_MEMBER_IDS) {
     if (memberId !== primaryMember.id && memberId !== sonumMember.id) legacyMemberIdsToDrop.add(memberId);
   }
+  const normalizeMemberId = (memberId?: string) => {
+    if (!memberId) return memberId;
+    if (memberId === SONUM_MEMBER_ID && sonumMember.id !== SONUM_MEMBER_ID) return sonumMember.id;
+    if (legacyMemberIdsToDrop.has(memberId)) return primaryMemberId;
+    return memberId;
+  };
+  const normalizeMemberIds = (memberIds?: string[]) =>
+    [...new Set((memberIds ?? []).map(normalizeMemberId).filter((memberId): memberId is string => Boolean(memberId)))];
   const otherMembers = existingMembers.filter((member) =>
     member.id !== primaryMember.id &&
     member.id !== sonumMember.id &&
@@ -110,7 +121,7 @@ const ensureCollaborationDefaults = (data: GardenData): GardenData => {
       ...item,
       workspaceId: item.workspaceId ?? DEFAULT_PRIVATE_WORKSPACE_ID,
       visibility: item.visibility ?? "private",
-      createdBy: item.createdBy ?? primaryMemberId,
+      createdBy: normalizeMemberId(item.createdBy) ?? primaryMemberId,
     }));
   return {
     ...data,
@@ -128,6 +139,90 @@ const ensureCollaborationDefaults = (data: GardenData): GardenData => {
       ...relation,
       workspaceId: relation.workspaceId ?? DEFAULT_PRIVATE_WORKSPACE_ID,
     })),
+    taskGardenItems: data.taskGardenItems.map((item) => ({
+      ...item,
+      ownerId: normalizeMemberId(item.ownerId),
+      assigneeIds: normalizeMemberIds(item.assigneeIds),
+      createdBy: normalizeMemberId(item.createdBy) ?? primaryMemberId,
+    })),
+    objectComments: data.objectComments.map((comment) => ({
+      ...comment,
+      authorId: normalizeMemberId(comment.authorId) ?? primaryMemberId,
+    })),
+  };
+};
+
+const mergeDefaultsFirst = <T extends { id: string }>(defaults: T[], existing: T[]) => {
+  const merged = new Map(defaults.map((item) => [item.id, item]));
+  existing.forEach((item) => {
+    if (!merged.has(item.id)) merged.set(item.id, item);
+  });
+  return [...merged.values()];
+};
+
+const mergeWithExistingOverrides = <T extends { id: string }>(defaults: T[], existing: T[]) => {
+  const merged = new Map(defaults.map((item) => [item.id, item]));
+  existing.forEach((item) => merged.set(item.id, item));
+  return [...merged.values()];
+};
+
+const migrateTrainDefaults = (storedTrain: GardenData["train"] | undefined, seedTrain: GardenData["train"]): GardenData["train"] => {
+  if (!storedTrain) return seedTrain;
+  const sessions = storedTrain.sessions ?? [];
+  const activeSession = sessions.find((session) => session.id === storedTrain.activeSessionId && !session.completedAt);
+  const storedTemplates = (storedTrain.templates ?? []).filter((template) =>
+    !LEGACY_TRAIN_TEMPLATE_IDS.has(template.id) || template.id === activeSession?.templateId
+  );
+  return {
+    ...seedTrain,
+    ...storedTrain,
+    targets: mergeDefaultsFirst(seedTrain.targets, storedTrain.targets ?? []),
+    exercises: mergeDefaultsFirst(seedTrain.exercises, storedTrain.exercises ?? []),
+    customExercises: storedTrain.customExercises ?? [],
+    sets: storedTrain.sets ?? [],
+    templates: mergeDefaultsFirst(seedTrain.templates, storedTemplates),
+    sessions,
+  };
+};
+
+const migrateNutritionDefaults = (
+  storedNutrition: GardenData["nutrition"] | undefined,
+  seedNutrition: GardenData["nutrition"],
+  storedProfile: Partial<GardenData["profile"]> | undefined,
+): GardenData["nutrition"] => {
+  if (!storedNutrition) {
+    return {
+      ...seedNutrition,
+      settings: {
+        ...seedNutrition.settings,
+        proteinTargetGrams: storedProfile?.proteinTarget ?? seedNutrition.settings.proteinTargetGrams,
+      },
+    };
+  }
+  const deletedFoodIds = new Set(storedNutrition.deletedFoodIds ?? []);
+  const deletedRecipeIds = new Set(storedNutrition.deletedRecipeIds ?? []);
+  const foods = mergeWithExistingOverrides(seedNutrition.foods, storedNutrition.foods ?? [])
+    .filter((food) => !deletedFoodIds.has(food.id));
+  const recipes = mergeWithExistingOverrides(seedNutrition.recipes, storedNutrition.recipes ?? [])
+    .filter((recipe) => !deletedRecipeIds.has(recipe.id))
+    .map((recipe) => ({
+      ...recipe,
+      ingredients: recipe.ingredients.filter((ingredient) => !deletedFoodIds.has(ingredient.foodId)),
+    }));
+  return {
+    ...defaultNutritionState,
+    ...seedNutrition,
+    ...storedNutrition,
+    settings: {
+      ...defaultNutritionState.settings,
+      ...seedNutrition.settings,
+      ...storedNutrition.settings,
+      proteinTargetGrams: storedNutrition.settings?.proteinTargetGrams ?? storedProfile?.proteinTarget ?? seedNutrition.settings.proteinTargetGrams,
+    },
+    foods,
+    recipes,
+    deletedFoodIds: [...deletedFoodIds],
+    deletedRecipeIds: [...deletedRecipeIds],
   };
 };
 
@@ -140,7 +235,8 @@ export const migrateGardenData = (stored: Partial<GardenData> | null, date = tod
     profile: { ...seed.profile, ...stored.profile },
     members: stored.members ?? seed.members,
     workspaces: stored.workspaces ?? seed.workspaces,
-    train: stored.train ?? seed.train,
+    train: migrateTrainDefaults(stored.train, seed.train),
+    nutrition: migrateNutritionDefaults(stored.nutrition, seed.nutrition, stored.profile),
     relationships: stored.relationships ?? seed.relationships,
     sources: stored.sources ?? seed.sources,
     objectNotes: stored.objectNotes ?? seed.objectNotes,
@@ -148,8 +244,14 @@ export const migrateGardenData = (stored: Partial<GardenData> | null, date = tod
     objectRelations: stored.objectRelations ?? seed.objectRelations,
     objectActivity: stored.objectActivity ?? seed.objectActivity,
     objectNextActions: stored.objectNextActions ?? seed.objectNextActions,
-    taskGardenItems: stored.taskGardenItems ?? seed.taskGardenItems,
+    taskGardenItems: (stored.taskGardenItems ?? seed.taskGardenItems).map((item) => ({
+      ...item,
+      visibility: item.visibility ?? "shared",
+      assigneeIds: item.assigneeIds ?? (item.ownerId ? [item.ownerId] : []),
+    })),
     objectComments: stored.objectComments ?? seed.objectComments,
+    partnerSharingSettings: mergeWithExistingOverrides(defaultPartnerSharingSettings, stored.partnerSharingSettings ?? seed.partnerSharingSettings ?? []),
+    meals: stored.meals ?? seed.meals,
     mealPlans: stored.mealPlans ?? seed.mealPlans,
     groceries: stored.groceries ?? seed.groceries,
     journal: stored.journal ?? seed.journal,
@@ -165,6 +267,7 @@ export const deriveUserContext = (data: GardenData, date = todayKey()): UserCont
   const activeWork = data.kanbanCards.filter((card) => card.column === "today" || card.column === "blocked").length;
   const hardSets = data.train.sets.filter((set) => set.rir <= 4).length;
   const protein = data.meals.filter((meal) => meal.date === date).reduce((sum, meal) => sum + meal.proteinGrams, 0);
+  const proteinTarget = data.nutrition?.settings.proteinTargetGrams ?? data.profile.proteinTarget;
   return {
     goals: [data.profile.focusTheme, data.projects[0]?.outcome ?? "Protect meaningful attention."],
     energy: latestReview?.energy ?? plan.energy,
@@ -172,7 +275,7 @@ export const deriveUserContext = (data: GardenData, date = todayKey()): UserCont
     trainingLoad: hardSets >= 14 ? "high" : hardSets >= 6 ? "moderate" : "low",
     workload: activeWork >= 4 ? "overloaded" : activeWork >= 2 ? "balanced" : "clear",
     projects: data.projects.map((project) => project.name),
-    proteinProgress: Math.min(protein / data.profile.proteinTarget, 1),
+    proteinProgress: Math.min(protein / proteinTarget, 1),
     hydrationComplete: plan.hydrationComplete,
     focusPreference: plan.activeClarityGoal,
   };
@@ -223,9 +326,11 @@ const withTaskGardenItem = (
         id: createId(),
         objectRef: ref,
         workspaceId,
+        visibility: "shared" as const,
         zone: options.taskGardenZone ?? "develop",
         title,
         ownerId: options.ownerId,
+        assigneeIds: options.ownerId ? [options.ownerId] : [],
         createdBy: createdByForData(data, options.createdBy),
         createdAt: new Date().toISOString(),
       },

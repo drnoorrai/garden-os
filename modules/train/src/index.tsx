@@ -130,9 +130,33 @@ const SessionBuilder = () => {
   const active = data.train.sessions.find((session) => session.id === data.train.activeSessionId && !session.completedAt);
   const [name, setName] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
+  const [setDrafts, setSetDrafts] = useState<Record<string, { reps: number; weightKg: number; rir: number }>>({});
   const startSession = (template: WorkoutTemplate) => {
     const id = createId();
     update((current) => ({ ...current, train: { ...current.train, sessions: [{ id, date: todayKey(), name: template.name, templateId: template.id }, ...current.train.sessions], activeSessionId: id } }));
+  };
+  const draftFor = (exerciseId: string) => setDrafts[exerciseId] ?? { reps: 10, weightKg: 0, rir: 2 };
+  const updateDraft = (exerciseId: string, change: Partial<{ reps: number; weightKg: number; rir: number }>) => {
+    const current = draftFor(exerciseId);
+    setSetDrafts((drafts) => ({ ...drafts, [exerciseId]: { ...current, ...change } }));
+  };
+  const logPlannedSet = (exerciseId: string, sessionId: string) => {
+    const draft = draftFor(exerciseId);
+    update((current) => ({
+      ...current,
+      train: {
+        ...current.train,
+        sets: [
+          {
+            ...createLoggedSet(exerciseId, sessionId),
+            reps: Math.max(1, draft.reps || 1),
+            weightKg: Math.max(0, draft.weightKg || 0),
+            rir: Math.min(Math.max(0, draft.rir || 0), 10),
+          },
+          ...current.train.sets,
+        ],
+      },
+    }));
   };
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_.85fr]">
@@ -142,10 +166,50 @@ const SessionBuilder = () => {
           <div className="space-y-3">
             {data.train.templates.find((template) => template.id === active.templateId)?.exercises.map((planned) => {
               const logged = data.train.sets.filter((set) => set.sessionId === active.id && set.exerciseId === planned.exerciseId).length;
+              const draft = draftFor(planned.exerciseId);
               return (
-                <div key={planned.exerciseId} className="flex items-center justify-between rounded-2xl bg-mist/55 p-4">
-                  <div><p className="font-medium">{exerciseName(data.train, planned.exerciseId)}</p><p className="text-sm text-muted">{logged} / {planned.targetSets} sets</p></div>
-                  <Button variant="secondary" onClick={() => update((current) => ({ ...current, train: { ...current.train, sets: [{ ...createLoggedSet(planned.exerciseId, active.id) }, ...current.train.sets] } }))}>Log</Button>
+                <div key={planned.exerciseId} className="rounded-2xl bg-mist/55 p-4">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <p className="font-medium">{exerciseName(data.train, planned.exerciseId)}</p>
+                      <p className="text-sm text-muted">{logged} / {planned.targetSets} sets logged</p>
+                    </div>
+                    <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2">
+                      <div>
+                        <Label htmlFor={`${planned.exerciseId}-reps`}>Reps</Label>
+                        <Input
+                          id={`${planned.exerciseId}-reps`}
+                          min={1}
+                          type="number"
+                          value={draft.reps}
+                          onChange={(event) => updateDraft(planned.exerciseId, { reps: Number(event.target.value) })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`${planned.exerciseId}-weight`}>Kg</Label>
+                        <Input
+                          id={`${planned.exerciseId}-weight`}
+                          min={0}
+                          step="0.5"
+                          type="number"
+                          value={draft.weightKg}
+                          onChange={(event) => updateDraft(planned.exerciseId, { weightKg: Number(event.target.value) })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`${planned.exerciseId}-rir`}>RIR</Label>
+                        <Input
+                          id={`${planned.exerciseId}-rir`}
+                          max={10}
+                          min={0}
+                          type="number"
+                          value={draft.rir}
+                          onChange={(event) => updateDraft(planned.exerciseId, { rir: Number(event.target.value) })}
+                        />
+                      </div>
+                      <Button variant="secondary" onClick={() => logPlannedSet(planned.exerciseId, active.id)}>Log</Button>
+                    </div>
+                  </div>
                 </div>
               );
             })}

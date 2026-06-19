@@ -43,7 +43,7 @@ export const OnboardingPage = () => {
         onboardingComplete: true,
       },
     }));
-    navigate("/work", { replace: true });
+    navigate("/think", { replace: true });
   };
 
   return (

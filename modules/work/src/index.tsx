@@ -1,107 +1,57 @@
-import { ModuleHeader, ModuleTabs, StatCard } from "@garden/design-system";
-import { DEFAULT_PRIVATE_WORKSPACE_ID, createId, objectPath, todayKey } from "@garden/domain";
+import { ModuleHeader, ModuleTabs } from "@garden/design-system";
+import { DEFAULT_PRIVATE_WORKSPACE_ID, DEFAULT_SHARED_WORKSPACE_ID, SONUM_MEMBER_ID, createId, objectPath, todayKey } from "@garden/domain";
 import { captureUniversalItem, useGarden } from "@garden/shared-state";
-import type { ContentFormat, ContentStage, KanbanColumn, MoscowPriority, ObjectRef, RelationshipKind, RelationshipNoteKind, RelationshipRecord, RelationshipStage, TaskGardenItem, TaskGardenZone, TriageAction, WorkItemKind } from "@garden/types";
-import { Button, Card, Input, Label, Pill, SectionHeading, Textarea } from "@garden/ui";
-import { Building2, ExternalLink, GripVertical, Plus, UserRound } from "lucide-react";
-import { useState } from "react";
+import type { ContentFormat, GardenMember, ObjectRef, PartnerSharingLevel, RelationshipKind, RelationshipNoteKind, RelationshipRecord, RelationshipStage, TaskGardenItem, TaskGardenZone, TriageAction, WorkItem, WorkItemKind } from "@garden/types";
+import { Button, Card, cn, Input, Label, Pill, SectionHeading, Textarea } from "@garden/ui";
+import { ArrowRight, Building2, ExternalLink, GripVertical, MessageSquare, Plus, Trash2, UserRound } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Link as RouterLink, Navigate, Route, Routes } from "react-router-dom";
-import { getTodaySummary } from "./lib";
 
 const tabs = [
-  { to: "/work", label: "Overview", end: true },
-  { to: "/work/inbox", label: "Inbox" },
-  { to: "/work/content", label: "Content" },
-  { to: "/work/relationships", label: "Relationships" },
-  { to: "/work/task-garden", label: "Task Garden" },
-  { to: "/work/execute", label: "Execute" },
-  { to: "/work/projects", label: "Projects" },
+  { to: "/think", label: "Inbox", end: true },
+  { to: "/think/content", label: "Content" },
+  { to: "/think/relationships", label: "Relationships" },
+  { to: "/think/task-garden", label: "Task Garden" },
+  { to: "/think/clarity", label: "Clarity" },
 ];
 
 const belongsToWorkspace = (workspaceId: string, item: { workspaceId?: string }) =>
   (item.workspaceId ?? DEFAULT_PRIVATE_WORKSPACE_ID) === workspaceId;
 
+const clarityStages = [
+  { id: "want", label: "Want", question: "What do you want?", guidance: "Name what you are reaching for, before justifying it." },
+  { id: "values", label: "Values", question: "What's important to you?", guidance: "What should remain intact as you pursue it?" },
+  { id: "strategy", label: "Strategy", question: "How are you getting it?", guidance: "Look honestly at choices, attention and energy." },
+  { id: "blockers", label: "Blockers", question: "What is preventing you from having it?", guidance: "Name the constraint precisely." },
+  { id: "evidence", label: "Evidence", question: "How will you know that you have it?", guidance: "Define visible signs of progress and enough." },
+] as const;
+
 export const WorkRoutes = () => {
   const { activeWorkspace, data } = useGarden();
-  const summary = getTodaySummary(data);
+  const inboxCount = data.workItems.filter((item) => item.triage !== "delete").length;
   return (
     <>
       <ModuleHeader
-        title="Work"
-        description={`The capture-first operating surface for ${activeWorkspace.name}: inbox, content, relationships, shared prioritization and execution.`}
-        aside={<Pill tone={activeWorkspace.kind === "shared" ? "sage" : summary.sprintLoad === "overloaded" ? "clay" : "stone"}>{activeWorkspace.kind === "shared" ? "shared garden" : `${summary.sprintLoad} sprint`}</Pill>}
+        title="Think"
+        description={`Capture, clarify and shape ${activeWorkspace.name}: inbox, content, relationships, task garden and guided clarity.`}
+        aside={<Pill tone={activeWorkspace.kind === "shared" ? "sage" : "stone"}>{activeWorkspace.kind === "shared" ? "shared garden" : `${inboxCount} active captures`}</Pill>}
       />
       <ModuleTabs tabs={tabs} />
       <Routes>
-        <Route index element={<Overview />} />
-        <Route path="inbox" element={<InboxPanel />} />
+        <Route index element={<InboxPanel />} />
+        <Route path="inbox" element={<Navigate replace to="/think" />} />
         <Route path="content" element={<ContentStudio />} />
         <Route path="relationships" element={<RelationshipsStudio />} />
         <Route path="task-garden" element={<TaskGarden />} />
-        <Route path="prioritize" element={<Navigate replace to="/work" />} />
-        <Route path="bets" element={<Navigate replace to="/work" />} />
-        <Route path="execute" element={<Execute />} />
-        <Route path="kanban" element={<Navigate replace to="/work/execute" />} />
-        <Route path="projects" element={<Projects />} />
-        <Route path="sprint" element={<Navigate replace to="/work/execute" />} />
+        <Route path="clarity" element={<Clarity />} />
+        <Route path="prioritize" element={<Navigate replace to="/think" />} />
+        <Route path="bets" element={<Navigate replace to="/think" />} />
+        <Route path="execute" element={<Navigate replace to="/think/task-garden" />} />
+        <Route path="kanban" element={<Navigate replace to="/think/task-garden" />} />
+        <Route path="projects" element={<Navigate replace to="/think" />} />
+        <Route path="sprint" element={<Navigate replace to="/think/task-garden" />} />
       </Routes>
     </>
-  );
-};
-
-const Overview = () => {
-  const { activeWorkspace, activeWorkspaceId, data } = useGarden();
-  const summary = getTodaySummary(data);
-  const activeInbox = data.workItems.filter((item) => belongsToWorkspace(activeWorkspaceId, item) && item.triage !== "delete").length;
-  const contentIdeas = data.workItems.filter((item) => belongsToWorkspace(activeWorkspaceId, item) && item.kind === "content" && item.triage !== "delete").length;
-  const relationships = data.relationships.filter((record) => belongsToWorkspace(activeWorkspaceId, record) && record.stage !== "archived").length;
-  const taskGardenItems = data.taskGardenItems.filter((item) => item.workspaceId === activeWorkspaceId).length;
-  return (
-    <div className="space-y-6">
-      <div className="grid gap-3 md:grid-cols-4">
-        <StatCard label="Inbox" value={activeInbox} supporting="Captured items to process" />
-        <StatCard label="Content" value={contentIdeas} supporting="Ideas in development" />
-        <StatCard label="Relationships" value={relationships} supporting="People and companies" />
-        <StatCard label="Task Garden" value={taskGardenItems} supporting={activeWorkspace.kind === "shared" ? "Shared priorities" : "Private shaping board"} />
-      </div>
-      <Card className="p-6">
-        <SectionHeading title="Capture lanes" supporting="Quick Capture now routes ideas into the surface that can actually hold them." />
-        <div className="grid gap-3 md:grid-cols-4">
-          <RouterLink to="/work/inbox" className="rounded-2xl bg-mist/45 p-4 transition hover:bg-mist">
-            <Pill tone="stone">Inbox</Pill>
-            <p className="mt-3 font-medium">Tasks, thoughts and obligations</p>
-            <p className="mt-2 text-sm leading-6 text-muted">Process later without making capture feel heavy.</p>
-          </RouterLink>
-          <RouterLink to="/work/content" className="rounded-2xl bg-mist/45 p-4 transition hover:bg-mist">
-            <Pill tone="sage">Content</Pill>
-            <p className="mt-3 font-medium">Ideas, hooks and drafts</p>
-            <p className="mt-2 text-sm leading-6 text-muted">Move raw observations toward angles, outlines and drafts.</p>
-          </RouterLink>
-          <RouterLink to="/work/relationships" className="rounded-2xl bg-mist/45 p-4 transition hover:bg-mist">
-            <Pill tone="sage">Relationships</Pill>
-            <p className="mt-3 font-medium">People and companies</p>
-            <p className="mt-2 text-sm leading-6 text-muted">Keep context, links and ideas attached to the right relationship.</p>
-          </RouterLink>
-          <RouterLink to="/work/task-garden" className="rounded-2xl bg-mist/45 p-4 transition hover:bg-mist">
-            <Pill tone="clay">Task Garden</Pill>
-            <p className="mt-3 font-medium">Do Now, Develop, Ask</p>
-            <p className="mt-2 text-sm leading-6 text-muted">A shared 3-zone board for prioritizing captured ideas with Sonum.</p>
-          </RouterLink>
-        </div>
-      </Card>
-      <Card className="p-6">
-        <SectionHeading title="Current focus" supporting={data.projects[0]?.outcome ?? "Choose the project only after the capture lanes are clear."} />
-        <p className="font-serif text-3xl tracking-tight">{data.projects[0]?.name ?? summary.priority}</p>
-        <div className="mt-6 grid gap-3 md:grid-cols-2">
-          {data.kanbanCards.filter((card) => card.column === "today" || card.column === "sprint" || card.column === "blocked").map((card) => (
-            <div key={card.id} className="rounded-2xl bg-mist/50 p-4">
-              <Pill tone={card.column === "blocked" ? "clay" : "stone"}>{card.column}</Pill>
-              <p className="mt-3 font-medium">{card.title}</p>
-            </div>
-          ))}
-        </div>
-      </Card>
-    </div>
   );
 };
 
@@ -144,42 +94,153 @@ const InboxPanel = () => {
   );
 };
 
-const contentStages: Array<{ id: ContentStage; label: string; guidance: string }> = [
-  { id: "seed", label: "Seed", guidance: "Raw observation or thesis." },
-  { id: "angle", label: "Angle", guidance: "Who is it for and why now?" },
-  { id: "outline", label: "Outline", guidance: "Shape the argument." },
-  { id: "draft", label: "Draft", guidance: "Ready to write or record." },
-  { id: "published", label: "Published", guidance: "Shipped or archived." },
-];
+const Clarity = () => {
+  const { data, update } = useGarden();
+  const [stage, setStage] = useState(0);
+  const [title, setTitle] = useState("");
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const prompt = clarityStages[stage];
+  const complete = stage === clarityStages.length - 1;
+  const report = useMemo(() => ({
+    want: answers.want || "Not yet named.",
+    blockers: answers.blockers || "Not yet named.",
+    next: answers.evidence || "Choose one practical test.",
+  }), [answers]);
+  return (
+    <div className="grid gap-6 lg:grid-cols-[1fr_.78fr]">
+      <Card className="p-6 sm:p-8">
+        <div className="mb-8 flex flex-wrap gap-2">
+          {clarityStages.map((item, index) => (
+            <button
+              key={item.id}
+              onClick={() => index <= stage && setStage(index)}
+              className={cn(
+                "rounded-full px-3 py-2 text-xs font-medium",
+                index === stage ? "bg-forest text-white" : index < stage ? "bg-sage/15 text-forest" : "bg-mist text-muted",
+              )}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs font-medium uppercase tracking-[0.15em] text-muted">{prompt.label} · {String(stage + 1).padStart(2, "0")}</p>
+        <h2 className="mt-4 font-serif text-4xl tracking-tight">{prompt.question}</h2>
+        <p className="mt-3 text-sm leading-7 text-muted">{prompt.guidance}</p>
+        {stage === 0 ? <Input className="mt-7" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Name this session" /> : null}
+        <Textarea
+          className="mt-4 min-h-52"
+          value={answers[prompt.id] ?? ""}
+          onChange={(event) => setAnswers({ ...answers, [prompt.id]: event.target.value })}
+          placeholder="Write freely. Your response stays in this browser."
+        />
+        <div className="mt-5 flex justify-between">
+          <Button variant="quiet" disabled={stage === 0} onClick={() => setStage((value) => Math.max(value - 1, 0))}>Back</Button>
+          {!complete ? (
+            <Button onClick={() => setStage((value) => Math.min(value + 1, clarityStages.length - 1))}>Continue <ArrowRight size={15} /></Button>
+          ) : (
+            <Button
+              onClick={() => {
+                update((current) => ({
+                  ...current,
+                  claritySessions: [
+                    {
+                      id: createId(),
+                      title: title.trim() || "Clarity session",
+                      createdAt: todayKey(),
+                      answers: Object.fromEntries(clarityStages.map((item) => [item.question, answers[item.id] ?? ""])),
+                    },
+                    ...current.claritySessions,
+                  ],
+                }));
+                setStage(0);
+                setTitle("");
+                setAnswers({});
+              }}
+            >
+              Save report
+            </Button>
+          )}
+        </div>
+      </Card>
+      <div className="space-y-4">
+        <Card className="p-6">
+          <SectionHeading title="Private report preview" supporting="A considered reading, not an answer imposed on you." />
+          <Insight label="What you want" text={report.want} />
+          <Insight label="Constraint" text={report.blockers} />
+          <Insight label="Success signal" text={report.next} />
+        </Card>
+        {data.claritySessions.map((session) => (
+          <Card key={session.id} className="p-5">
+            <p className="text-xs text-muted">{session.createdAt}</p>
+            <p className="mt-2 font-medium">{session.title}</p>
+            <p className="mt-2 text-sm text-muted">{session.answers["What do you want?"]}</p>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const Insight = ({ label, text }: { label: string; text: string }) => (
+  <div className="mb-4 rounded-xl bg-mist/55 p-4">
+    <p className="text-xs uppercase tracking-[0.13em] text-muted">{label}</p>
+    <p className="mt-2 text-sm leading-6">{text}</p>
+  </div>
+);
 
 const contentFormats: ContentFormat[] = ["post", "essay", "thread", "video", "newsletter"];
 
 const ContentStudio = () => {
   const { activeWorkspace, activeWorkspaceId, currentMemberId, data, update } = useGarden();
   const [draft, setDraft] = useState("");
-  const [audience, setAudience] = useState("Creators and operators");
   const [format, setFormat] = useState<ContentFormat>("post");
-  const contentItems = data.workItems.filter((item) => belongsToWorkspace(activeWorkspaceId, item) && item.kind === "content" && item.triage !== "delete");
+  const [tileDrafts, setTileDrafts] = useState<Record<string, { title: string; notes: string; format: ContentFormat }>>({});
+  const contentItems = data.workItems.filter((item): item is WorkItem => belongsToWorkspace(activeWorkspaceId, item) && item.kind === "content" && item.triage !== "delete");
   const convertedSourceIds = new Set(data.objectRelations
     .filter((relation) => (relation.workspaceId ?? DEFAULT_PRIVATE_WORKSPACE_ID) === activeWorkspaceId && relation.label === "source-for" && relation.from.kind === "source")
     .map((relation) => relation.from.id));
   const sourceQueue = data.sources.filter((source) => belongsToWorkspace(activeWorkspaceId, source) && !convertedSourceIds.has(source.id)).slice(0, 4);
 
-  const updateContent = (id: string, change: Partial<(typeof contentItems)[number]>) =>
+  const updateContent = (id: string, change: Partial<WorkItem>) =>
     update((current) => ({
       ...current,
       workItems: current.workItems.map((item) => item.id === id ? { ...item, ...change } : item),
     }));
 
+  const draftForTile = (item: WorkItem) => tileDrafts[item.id] ?? {
+    title: item.title,
+    notes: item.hook ?? "",
+    format: item.contentFormat ?? "post",
+  };
+
+  const updateTileDraft = (id: string, change: Partial<{ title: string; notes: string; format: ContentFormat }>, item: WorkItem) => {
+    const current = draftForTile(item);
+    setTileDrafts((drafts) => ({ ...drafts, [id]: { ...current, ...change } }));
+  };
+
+  const saveTile = (item: WorkItem) => {
+    const tileDraft = draftForTile(item);
+    updateContent(item.id, {
+      title: tileDraft.title.trim() || item.title,
+      hook: tileDraft.notes,
+      contentFormat: tileDraft.format,
+    });
+    setTileDrafts((drafts) => {
+      const next = { ...drafts };
+      delete next[item.id];
+      return next;
+    });
+  };
+
   return (
     <div className="space-y-6">
       <Card className="p-6">
         <SectionHeading
-          title="Content idea development"
-          supporting={`Turn captured thoughts, source notes and shared angles into useful creator output for ${activeWorkspace.name}.`}
+          title="Content Ideas"
+          supporting={`Simple idea tiles with notes directly underneath for ${activeWorkspace.name}.`}
         />
         <form
-          className="grid gap-3 lg:grid-cols-[1fr_220px_160px_auto]"
+          className="grid gap-3 lg:grid-cols-[1fr_150px_auto]"
           onSubmit={(event) => {
             event.preventDefault();
             if (!draft.trim()) return;
@@ -194,7 +255,6 @@ const ContentStudio = () => {
                   triage: "untriaged",
                   contentStage: "seed",
                   contentFormat: format,
-                  audience: audience.trim() || undefined,
                   workspaceId: activeWorkspaceId,
                   visibility: activeWorkspace.kind === "shared" ? "shared" : "private",
                   createdBy: currentMemberId,
@@ -206,75 +266,109 @@ const ContentStudio = () => {
           }}
         >
           <Input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="A content idea, thesis or observation" />
-          <Input value={audience} onChange={(event) => setAudience(event.target.value)} placeholder="Audience" />
-          <select value={format} onChange={(event) => setFormat(event.target.value as ContentFormat)} className="h-11 rounded-xl border border-ink/8 bg-white px-3 text-sm">
+          <select aria-label="Content format" value={format} onChange={(event) => setFormat(event.target.value as ContentFormat)} className="h-11 rounded-xl border border-ink/8 bg-white px-3 text-sm">
             {contentFormats.map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
           <Button type="submit"><Plus size={15} /> Add</Button>
         </form>
       </Card>
 
-      <Card className="p-6">
-        <SectionHeading
-          title="Source queue"
-          supporting="Links, podcasts and top news stories captured from Quick Capture before they become content."
-        />
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {sourceQueue.length ? sourceQueue.map((source) => (
-            <RouterLink key={source.id} to={objectPath({ kind: "source", id: source.id })} className="rounded-2xl bg-mist/45 p-4 transition hover:bg-mist">
-              <Pill tone={source.sourceType === "youtube" ? "clay" : "stone"}>{source.sourceType}</Pill>
-              <p className="mt-3 text-sm font-medium leading-6">{source.title}</p>
-              <p className="mt-2 truncate text-xs text-muted">{source.publisher ?? source.url}</p>
-            </RouterLink>
-          )) : <p className="rounded-xl border border-dashed border-ink/10 p-4 text-sm text-muted md:col-span-2 xl:col-span-4">Paste a YouTube, podcast or news link into Quick Capture to start a source object.</p>}
+      {contentItems.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-ink/10 bg-white/70 p-8 text-center text-sm text-muted">
+          No content ideas yet. Add one above.
         </div>
-      </Card>
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {contentItems.map((item) => {
+            const tileDraft = draftForTile(item);
+            const dirty = tileDraft.title !== item.title || tileDraft.notes !== (item.hook ?? "") || tileDraft.format !== (item.contentFormat ?? "post");
+            return (
+              <div key={item.id} className="rounded-2xl border border-ink/6 bg-white p-5 shadow-card">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <Label htmlFor={`content-title-${item.id}`}>Idea</Label>
+                    <Input
+                      id={`content-title-${item.id}`}
+                      value={tileDraft.title}
+                      onChange={(event) => updateTileDraft(item.id, { title: event.target.value }, item)}
+                    />
+                  </div>
+                  <Button variant="quiet" type="button" aria-label={`Remove ${item.title}`} onClick={() => updateContent(item.id, { triage: "delete" })}>
+                    <Trash2 size={15} />
+                  </Button>
+                </div>
+                <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                  <div>
+                    <Label htmlFor={`content-format-${item.id}`}>Format</Label>
+                    <select
+                      id={`content-format-${item.id}`}
+                      className="h-11 w-full rounded-xl border border-ink/8 bg-white px-3 text-sm"
+                      value={tileDraft.format}
+                      onChange={(event) => updateTileDraft(item.id, { format: event.target.value as ContentFormat }, item)}
+                    >
+                      {contentFormats.map((value) => <option key={value} value={value}>{value}</option>)}
+                    </select>
+                  </div>
+                  <Pill tone={item.contentStage === "published" ? "sage" : "stone"}>{item.contentStage === "published" ? "published" : "idea"}</Pill>
+                </div>
+                <div className="mt-3">
+                  <Label htmlFor={`content-notes-${item.id}`}>Notes</Label>
+                  <Textarea
+                    id={`content-notes-${item.id}`}
+                    className="min-h-28 bg-mist/35"
+                    value={tileDraft.notes}
+                    onChange={(event) => updateTileDraft(item.id, { notes: event.target.value }, item)}
+                    placeholder="Hooks, examples, source notes, structure or the first line..."
+                  />
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button
+                    variant={dirty ? "primary" : "secondary"}
+                    className="h-8 min-h-8 px-3 text-xs"
+                    type="button"
+                    disabled={!dirty}
+                    onClick={() => saveTile(item)}
+                  >
+                    {dirty ? "Save changes" : "Saved"}
+                  </Button>
+                  <Button
+                    variant={item.contentStage === "published" ? "secondary" : "quiet"}
+                    className="h-8 min-h-8 px-3 text-xs"
+                    type="button"
+                    onClick={() => updateContent(item.id, { contentStage: item.contentStage === "published" ? "seed" : "published" })}
+                  >
+                    {item.contentStage === "published" ? "Published" : "Mark published"}
+                  </Button>
+                  <RouterLink
+                    to={objectPath({ kind: "content", id: item.id })}
+                    className="inline-flex min-h-8 items-center gap-1 rounded-full border border-ink/8 bg-white px-3 text-xs font-medium text-ink transition hover:bg-mist"
+                  >
+                    <MessageSquare size={14} /> Open
+                  </RouterLink>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
-      <div className="grid gap-4 xl:grid-cols-5">
-        {contentStages.map((stage) => {
-          const items = contentItems.filter((item) => (item.contentStage ?? "seed") === stage.id);
-          return (
-            <Card key={stage.id} className="min-h-64 p-4">
-              <div className="mb-4">
-                <Pill tone={stage.id === "published" ? "sage" : "stone"}>{stage.label}</Pill>
-                <p className="mt-3 text-xs leading-5 text-muted">{stage.guidance}</p>
-              </div>
-              <div className="space-y-3">
-                {items.map((item) => {
-                  const stageIndex = contentStages.findIndex((entry) => entry.id === (item.contentStage ?? "seed"));
-                  const nextStage = contentStages[Math.min(stageIndex + 1, contentStages.length - 1)]?.id ?? "published";
-                  return (
-                    <div key={item.id} className="rounded-2xl bg-mist/45 p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <RouterLink to={objectPath({ kind: "content", id: item.id })} className="text-sm font-medium leading-6 hover:text-forest hover:underline">{item.title}</RouterLink>
-                        <Pill>{item.contentFormat ?? "post"}</Pill>
-                      </div>
-                      <p className="mt-2 text-xs text-muted">{item.audience ?? "Audience not named"}</p>
-                      <Textarea
-                        className="mt-3 min-h-20 bg-white/75"
-                        value={item.hook ?? ""}
-                        onChange={(event) => updateContent(item.id, { hook: event.target.value })}
-                        placeholder="Hook, angle or outline notes..."
-                      />
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {stage.id !== "published" ? (
-                          <Button variant="secondary" className="h-8 min-h-8 px-3 text-xs" onClick={() => updateContent(item.id, { contentStage: nextStage })}>
-                            Move to {contentStages.find((entry) => entry.id === nextStage)?.label}
-                          </Button>
-                        ) : null}
-                        <Button variant="quiet" className="h-8 min-h-8 px-3 text-xs" onClick={() => updateContent(item.id, { triage: "delete" })}>
-                          Remove
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-                {items.length === 0 ? <p className="rounded-xl border border-dashed border-ink/10 p-4 text-sm leading-6 text-muted">No ideas here yet.</p> : null}
-              </div>
-            </Card>
-          );
-        })}
-      </div>
+      {sourceQueue.length ? (
+        <section className="space-y-3">
+          <SectionHeading
+            title="Source Sparks"
+            supporting="Captured links that may become a tile."
+          />
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {sourceQueue.map((source) => (
+              <RouterLink key={source.id} to={objectPath({ kind: "source", id: source.id })} className="rounded-2xl bg-white p-4 shadow-card transition hover:bg-mist">
+                <Pill tone={source.sourceType === "youtube" ? "clay" : "stone"}>{source.sourceType}</Pill>
+                <p className="mt-3 text-sm font-medium leading-6">{source.title}</p>
+                <p className="mt-2 truncate text-xs text-muted">{source.publisher ?? source.url}</p>
+              </RouterLink>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 };
@@ -542,14 +636,43 @@ const TaskGarden = () => {
   const { activeWorkspace, activeWorkspaceId, currentMemberId, data, update } = useGarden();
   const [title, setTitle] = useState("");
   const [zone, setZone] = useState<TaskGardenZone>("develop");
-  const [ownerId, setOwnerId] = useState("");
+  const [assignment, setAssignment] = useState("both");
+  const [filter, setFilter] = useState("all");
   const [dragging, setDragging] = useState<string | null>(null);
-  const members = activeWorkspace.memberIds
+  const coupleMemberIds = [...new Set([
+    data.profile.id,
+    SONUM_MEMBER_ID,
+    ...(data.workspaces.find((workspace) => workspace.id === DEFAULT_SHARED_WORKSPACE_ID)?.memberIds ?? []),
+  ])];
+  const members = coupleMemberIds
     .map((memberId) => data.members.find((member) => member.id === memberId))
-    .filter(Boolean);
-  const items = data.taskGardenItems.filter((item) => item.workspaceId === activeWorkspaceId);
+    .filter((member): member is GardenMember => Boolean(member));
+  const memberIds = members.map((member) => member.id);
+  const sharedTaskItems = data.taskGardenItems.filter((item) =>
+    item.visibility === "shared" ||
+    item.workspaceId === DEFAULT_SHARED_WORKSPACE_ID ||
+    item.workspaceId === DEFAULT_PRIVATE_WORKSPACE_ID
+  );
+  const items = sharedTaskItems.filter((item) => {
+    const assigneeIds = item.assigneeIds ?? (item.ownerId ? [item.ownerId] : []);
+    if (filter === "all") return true;
+    if (filter === "unassigned") return assigneeIds.length === 0;
+    if (filter === "both") return memberIds.length > 0 && memberIds.every((memberId) => assigneeIds.includes(memberId));
+    return assigneeIds.includes(filter);
+  });
 
-  const memberName = (memberId?: string) => members.find((member) => member?.id === memberId)?.name ?? "Both";
+  const memberName = (memberId?: string) => members.find((member) => member?.id === memberId)?.name ?? "Unknown";
+  const assignmentIds = (value: string) => {
+    if (value === "both") return memberIds;
+    if (value === "unassigned") return [];
+    return [value];
+  };
+  const assignmentLabel = (item: TaskGardenItem) => {
+    const assigneeIds = item.assigneeIds ?? (item.ownerId ? [item.ownerId] : []);
+    if (assigneeIds.length === 0) return "Unassigned";
+    if (memberIds.length > 0 && memberIds.every((memberId) => assigneeIds.includes(memberId))) return "Both";
+    return assigneeIds.map(memberName).join(", ");
+  };
   const objectTitle = (ref?: ObjectRef) => {
     if (!ref) return null;
     if (ref.kind === "person" || ref.kind === "company") return data.relationships.find((record) => record.id === ref.id)?.name ?? null;
@@ -565,6 +688,15 @@ const TaskGarden = () => {
         item.id === id ? { ...item, ...change, updatedAt: new Date().toISOString() } : item,
       ),
     }));
+
+  const updateAssignment = (id: string, value: string) => {
+    const assigneeIds = assignmentIds(value);
+    updateItem(id, {
+      assigneeIds,
+      ownerId: assigneeIds.length === 1 ? assigneeIds[0] : undefined,
+      visibility: "shared",
+    });
+  };
 
   const createContentIdea = (item: TaskGardenItem) => {
     const id = createId();
@@ -625,22 +757,25 @@ const TaskGarden = () => {
       <Card className="p-6">
         <SectionHeading
           title="Shared Task Garden"
-          supporting="A calm 3-zone board for deciding what deserves action, what needs shaping and what should be asked of someone else."
+          supporting="One couple-visible board. Either of you can create, assign and move tasks without switching gardens."
         />
         <form
-          className="grid gap-3 lg:grid-cols-[1fr_180px_180px_auto]"
+          className="grid gap-3 lg:grid-cols-[1fr_180px_190px_auto]"
           onSubmit={(event) => {
             event.preventDefault();
             if (!title.trim()) return;
+            const assigneeIds = assignmentIds(assignment);
             update((current) => ({
               ...current,
               taskGardenItems: [
                 {
                   id: createId(),
-                  workspaceId: activeWorkspaceId,
+                  workspaceId: DEFAULT_PRIVATE_WORKSPACE_ID,
+                  visibility: "shared",
                   zone,
                   title: title.trim(),
-                  ownerId: ownerId || undefined,
+                  ownerId: assigneeIds.length === 1 ? assigneeIds[0] : undefined,
+                  assigneeIds,
                   createdBy: currentMemberId,
                   createdAt: new Date().toISOString(),
                 },
@@ -651,18 +786,23 @@ const TaskGarden = () => {
           }}
         >
           <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Capture something that needs prioritizing or shaping" />
-          <select value={zone} onChange={(event) => setZone(event.target.value as TaskGardenZone)} className="h-11 rounded-xl border border-ink/8 bg-white px-3 text-sm">
+          <select aria-label="Task zone" value={zone} onChange={(event) => setZone(event.target.value as TaskGardenZone)} className="h-11 rounded-xl border border-ink/8 bg-white px-3 text-sm">
             {taskGardenZones.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
           </select>
-          <select value={ownerId} onChange={(event) => setOwnerId(event.target.value)} className="h-11 rounded-xl border border-ink/8 bg-white px-3 text-sm">
-            <option value="">Owner: both</option>
-            {members.map((member) => <option key={member?.id} value={member?.id}>Owner: {member?.name}</option>)}
+          <select aria-label="Task assignee" value={assignment} onChange={(event) => setAssignment(event.target.value)} className="h-11 rounded-xl border border-ink/8 bg-white px-3 text-sm">
+            <option value="both">Assign: both</option>
+            <option value="unassigned">Assign: unassigned</option>
+            {members.map((member) => <option key={member.id} value={member.id}>Assign: {member.name}</option>)}
           </select>
           <Button type="submit"><Plus size={15} /> Add</Button>
         </form>
-        <p className="mt-4 rounded-2xl bg-mist/55 p-4 text-sm leading-6 text-muted">
-          No fourth quadrant here. If something is not worth attention, quietly delete it or let it stay out of the Garden.
-        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" onClick={() => setFilter("all")} className={cn("rounded-full px-3 py-1.5 text-xs font-medium", filter === "all" ? "bg-forest text-white" : "bg-mist text-muted hover:bg-sage/15 hover:text-forest")}>All</button>
+          <button type="button" onClick={() => setFilter(data.profile.id)} className={cn("rounded-full px-3 py-1.5 text-xs font-medium", filter === data.profile.id ? "bg-forest text-white" : "bg-mist text-muted hover:bg-sage/15 hover:text-forest")}>Mine</button>
+          <button type="button" onClick={() => setFilter(SONUM_MEMBER_ID)} className={cn("rounded-full px-3 py-1.5 text-xs font-medium", filter === SONUM_MEMBER_ID ? "bg-forest text-white" : "bg-mist text-muted hover:bg-sage/15 hover:text-forest")}>Sonum</button>
+          <button type="button" onClick={() => setFilter("both")} className={cn("rounded-full px-3 py-1.5 text-xs font-medium", filter === "both" ? "bg-forest text-white" : "bg-mist text-muted hover:bg-sage/15 hover:text-forest")}>Both</button>
+          <button type="button" onClick={() => setFilter("unassigned")} className={cn("rounded-full px-3 py-1.5 text-xs font-medium", filter === "unassigned" ? "bg-forest text-white" : "bg-mist text-muted hover:bg-sage/15 hover:text-forest")}>Unassigned</button>
+        </div>
       </Card>
 
       <div className="grid gap-4 xl:grid-cols-3">
@@ -698,7 +838,7 @@ const TaskGarden = () => {
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium leading-6">{item.title}</p>
                           <p className="mt-1 text-xs text-muted">
-                            Owner: {memberName(item.ownerId)} · Added by {memberName(item.createdBy)}
+                            Assigned to {assignmentLabel(item)} · Added by {memberName(item.createdBy)}
                           </p>
                         </div>
                       </div>
@@ -715,14 +855,21 @@ const TaskGarden = () => {
                       />
                       <div className="mt-3 grid gap-2 sm:grid-cols-2">
                         <select
-                          value={item.ownerId ?? ""}
-                          onChange={(event) => updateItem(item.id, { ownerId: event.target.value || undefined })}
+                          aria-label={`Assign ${item.title}`}
+                          value={memberIds.length > 0 && memberIds.every((memberId) => (item.assigneeIds ?? (item.ownerId ? [item.ownerId] : [])).includes(memberId))
+                            ? "both"
+                            : (item.assigneeIds ?? (item.ownerId ? [item.ownerId] : [])).length === 0
+                              ? "unassigned"
+                              : (item.assigneeIds ?? (item.ownerId ? [item.ownerId] : []))[0]}
+                          onChange={(event) => updateAssignment(item.id, event.target.value)}
                           className="h-9 rounded-xl border border-ink/8 bg-white px-3 text-xs"
                         >
-                          <option value="">Both</option>
-                          {members.map((member) => <option key={member?.id} value={member?.id}>{member?.name}</option>)}
+                          <option value="both">Both</option>
+                          <option value="unassigned">Unassigned</option>
+                          {members.map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}
                         </select>
                         <select
+                          aria-label={`Move ${item.title}`}
                           value={item.zone}
                           onChange={(event) => updateItem(item.id, { zone: event.target.value as TaskGardenZone })}
                           className="h-9 rounded-xl border border-ink/8 bg-white px-3 text-xs"
@@ -746,154 +893,41 @@ const TaskGarden = () => {
           );
         })}
       </div>
-    </div>
-  );
-};
 
-const columns: Array<{ id: KanbanColumn; label: string }> = [{ id: "backlog", label: "Backlog" }, { id: "sprint", label: "This Sprint" }, { id: "today", label: "Today" }, { id: "blocked", label: "Blocked" }, { id: "done", label: "Done" }];
-const Execute = () => {
-  const { data, update } = useGarden();
-  const [title, setTitle] = useState("");
-  const [dragging, setDragging] = useState<string | null>(null);
-  return (
-    <div className="space-y-5">
-      <Card className="p-5"><SectionHeading title="Task Garden execution" supporting="Only committed work should enter the board." /><form className="flex gap-2" onSubmit={(event) => { event.preventDefault(); if (!title.trim()) return; update((current) => ({ ...current, kanbanCards: [...current.kanbanCards, { id: createId(), title: title.trim(), column: "backlog" }] })); setTitle(""); }}><Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Add an executable next action" /><Button type="submit">Add</Button></form></Card>
-      <div className="grid gap-3 md:grid-cols-5">{columns.map((column) => (
-        <Card key={column.id} className="min-h-64 p-3" onDragOver={(event) => event.preventDefault()} onDrop={() => { if (!dragging) return; update((current) => ({ ...current, kanbanCards: current.kanbanCards.map((card) => card.id === dragging ? { ...card, column: column.id } : card) })); setDragging(null); }}>
-          <p className="mb-3 p-2 text-sm font-medium text-muted">{column.label}</p>
-          {data.kanbanCards.filter((card) => card.column === column.id).map((card) => <div key={card.id} draggable onDragStart={() => setDragging(card.id)} className="mb-2 flex gap-2 rounded-xl bg-mist/55 p-3 text-sm"><GripVertical size={14} className="shrink-0 text-muted" />{card.title}</div>)}
-        </Card>
-      ))}</div>
-    </div>
-  );
-};
-
-const Projects = () => {
-  const { data, update } = useGarden();
-  const [scope, setScope] = useState("");
-  const [priority, setPriority] = useState<MoscowPriority>("must");
-  const [projectDraft, setProjectDraft] = useState({ name: "", outcome: "" });
-  const project = data.projects[0];
-  const createProject = () => {
-    const name = projectDraft.name.trim();
-    if (!name) return;
-    update((current) => ({
-      ...current,
-      projects: [
-        {
-          id: createId(),
-          name,
-          outcome: projectDraft.outcome.trim() || "Define what done looks like before adding scope.",
-          scope: [],
-        },
-        ...current.projects,
-      ],
-    }));
-    setProjectDraft({ name: "", outcome: "" });
-  };
-
-  if (!project) {
-    return (
-      <div className="grid gap-5 lg:grid-cols-[1fr_.9fr]">
-        <Card className="p-6 sm:p-8">
-          <Pill tone="stone">Scope control</Pill>
-          <h2 className="mt-5 font-serif text-4xl tracking-[-0.045em] sm:text-5xl">Projects are for bigger bodies of work.</h2>
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-muted">
-            Quick Capture is for anything. Task Garden is for prioritizing what deserves attention. Projects are only for work that needs a roadmap, boundaries and explicit MoSCoW scope.
-          </p>
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl bg-mist/45 p-4">
-              <p className="text-sm font-medium">Use Projects for</p>
-              <p className="mt-2 text-sm leading-6 text-muted">A launch, course, product, move, collaboration or multi-week creative sprint.</p>
+      <Card className="p-6">
+        <SectionHeading
+          title="Couple Sharing"
+          supporting="Choose what can appear in a partner's Garden. Task Garden is shared by default; more private surfaces can stay summary-only or private."
+        />
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {data.partnerSharingSettings.map((setting) => (
+            <div key={setting.id} className="rounded-2xl bg-mist/45 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium">{setting.label}</p>
+                  <p className="mt-2 text-sm leading-6 text-muted">{setting.description}</p>
+                </div>
+                <Pill tone={setting.level === "shared" ? "sage" : setting.level === "summary" ? "stone" : "clay"}>{setting.level}</Pill>
+              </div>
+              <select
+                aria-label={`${setting.label} sharing level`}
+                value={setting.level}
+                onChange={(event) => update((current) => ({
+                  ...current,
+                  partnerSharingSettings: current.partnerSharingSettings.map((item) =>
+                    item.id === setting.id ? { ...item, level: event.target.value as PartnerSharingLevel } : item,
+                  ),
+                }))}
+                className="mt-4 h-10 w-full rounded-xl border border-ink/8 bg-white px-3 text-sm"
+              >
+                <option value="private">Private</option>
+                <option value="summary">Summary only</option>
+                <option value="shared">Shared</option>
+              </select>
             </div>
-            <div className="rounded-2xl bg-mist/45 p-4">
-              <p className="text-sm font-medium">Do not use it for</p>
-              <p className="mt-2 text-sm leading-6 text-muted">Loose thoughts, links, tiny tasks or half-formed content ideas.</p>
-            </div>
-            <div className="rounded-2xl bg-mist/45 p-4">
-              <p className="text-sm font-medium">Why it exists</p>
-              <p className="mt-2 text-sm leading-6 text-muted">To stop good ideas from quietly turning into overbuilt commitments.</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-6">
-          <SectionHeading title="Create first project" supporting="Only add one when the work needs real boundaries." />
-          <form
-            className="space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              createProject();
-            }}
-          >
-            <div>
-              <Label htmlFor="project-name">Project name</Label>
-              <Input
-                id="project-name"
-                value={projectDraft.name}
-                onChange={(event) => setProjectDraft({ ...projectDraft, name: event.target.value })}
-                placeholder="Launch the creator newsletter"
-              />
-            </div>
-            <div>
-              <Label htmlFor="project-outcome">Desired outcome</Label>
-              <Textarea
-                id="project-outcome"
-                rows={4}
-                value={projectDraft.outcome}
-                onChange={(event) => setProjectDraft({ ...projectDraft, outcome: event.target.value })}
-                placeholder="A simple weekly publishing rhythm that feels sustainable."
-              />
-            </div>
-            <Button type="submit" className="w-full">Create project</Button>
-          </form>
-        </Card>
-      </div>
-    );
-  }
-
-  return (
-    <Card className="p-6">
-      <SectionHeading
-        title={project.name}
-        supporting={project.outcome}
-      />
-      <p className="mb-5 rounded-2xl bg-mist/55 p-4 text-sm leading-6 text-muted">
-        Use this page to decide what belongs in the project before execution starts. It is intentionally slower than Quick Capture.
-      </p>
-      <div className="grid gap-3 sm:grid-cols-4">
-        {(["must", "should", "could", "wont"] as MoscowPriority[]).map((value) => (
-          <div key={value} className="rounded-xl bg-mist/45 p-4">
-            <Pill tone={value === "must" ? "sage" : value === "wont" ? "clay" : "stone"}>{value === "wont" ? "Won't" : value}</Pill>
-            {project.scope.filter((item) => item.priority === value).map((item) => <p className="mt-3 text-sm" key={item.id}>{item.label}</p>)}
-            {project.scope.filter((item) => item.priority === value).length === 0 ? (
-              <p className="mt-3 text-sm leading-6 text-muted">No scope decisions yet.</p>
-            ) : null}
-          </div>
-        ))}
-      </div>
-      <form
-        className="mt-6 flex flex-col gap-2 sm:flex-row"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (!scope.trim()) return;
-          update((current) => ({
-            ...current,
-            projects: current.projects.map((item) =>
-              item.id === project.id ? { ...item, scope: [...item.scope, { id: createId(), label: scope.trim(), priority }] } : item,
-            ),
-          }));
-          setScope("");
-        }}
-      >
-        <Input value={scope} onChange={(event) => setScope(event.target.value)} placeholder="Add scope decision" />
-        <select value={priority} onChange={(event) => setPriority(event.target.value as MoscowPriority)} className="h-11 rounded-xl border border-ink/8 bg-white px-3 text-sm">
-          <option value="must">Must</option>
-          <option value="should">Should</option>
-          <option value="could">Could</option>
-          <option value="wont">Won't</option>
-        </select>
-        <Button type="submit">Add</Button>
-      </form>
-    </Card>
-  );
-};
+          ))}
+        </div>
+      </Card>
+	    </div>
+	  );
+	};

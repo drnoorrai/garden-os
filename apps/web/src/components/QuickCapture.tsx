@@ -1,4 +1,4 @@
-import { DEFAULT_PRIVATE_WORKSPACE_ID, getUniversalObjects, objectPath } from "@garden/domain";
+import { DEFAULT_PRIVATE_WORKSPACE_ID, createId, getUniversalObjects, objectPath, todayKey } from "@garden/domain";
 import { captureUniversalItem, useGarden } from "@garden/shared-state";
 import type { ObjectRef, TaskGardenZone, WorkItemKind } from "@garden/types";
 import { Button, cn, Input } from "@garden/ui";
@@ -6,30 +6,34 @@ import { Check, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const kinds: { id: WorkItemKind; label: string }[] = [
+type CaptureKind = WorkItemKind | "decision";
+
+const kinds: { id: CaptureKind; label: string }[] = [
   { id: "thought", label: "Thought" },
   { id: "task", label: "Task" },
   { id: "idea", label: "Idea" },
   { id: "content", label: "Content" },
   { id: "person", label: "Person" },
   { id: "company", label: "Company" },
+  { id: "decision", label: "Decision" },
 ];
 
-const helperText: Record<WorkItemKind, string> = {
-  thought: "Lands in your Work inbox to triage later.",
-  task: "Lands in your Work inbox to triage later.",
-  idea: "Lands in your Work inbox to triage later.",
-  obligation: "Lands in your Work inbox to triage later.",
-  content: "Content ideas also appear in Work → Content.",
-  person: "People appear in Work → Relationships.",
-  company: "Companies appear in Work → Relationships.",
+const helperText: Record<CaptureKind, string> = {
+  thought: "Lands in your Think inbox to triage later.",
+  task: "Lands in your Think inbox to triage later.",
+  idea: "Lands in your Think inbox to triage later.",
+  obligation: "Lands in your Think inbox to triage later.",
+  content: "Content ideas also appear in Think → Content.",
+  person: "People appear in Think → Relationships.",
+  company: "Companies appear in Think → Relationships.",
+  decision: "Logs a decision from Quick Capture without adding a separate Decisions page.",
 };
 
 export const QuickCapture = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
   const navigate = useNavigate();
   const { activeWorkspace, activeWorkspaceId, currentMemberId, data, update } = useGarden();
   const [draft, setDraft] = useState("");
-  const [kind, setKind] = useState<WorkItemKind>("thought");
+  const [kind, setKind] = useState<CaptureKind>("thought");
   const [mode, setMode] = useState<"capture" | "find">("capture");
   const [sendToTaskGarden, setSendToTaskGarden] = useState(activeWorkspace.kind === "shared");
   const [taskGardenZone, setTaskGardenZone] = useState<TaskGardenZone>("develop");
@@ -69,6 +73,38 @@ export const QuickCapture = ({ open, onClose }: { open: boolean; onClose: () => 
     if (!draft.trim()) return;
     let nextRef: ObjectRef | undefined;
     update((current) => {
+      if (kind === "decision") {
+        const createdAt = new Date().toISOString();
+        const nextData = {
+          ...current,
+          decisions: [
+            {
+              id: createId(),
+              date: todayKey(),
+              decision: draft.trim(),
+              rationale: "Captured from Quick Capture.",
+              status: "open" as const,
+            },
+            ...current.decisions,
+          ],
+        };
+        if (!sendToTaskGarden) return nextData;
+        return {
+          ...nextData,
+          taskGardenItems: [
+            {
+              id: createId(),
+              workspaceId: activeWorkspaceId,
+              zone: taskGardenZone,
+              title: draft.trim(),
+              ownerId: ownerId || undefined,
+              createdBy: currentMemberId,
+              createdAt,
+            },
+            ...nextData.taskGardenItems,
+          ],
+        };
+      }
       const result = captureUniversalItem(current, draft, kind, {
         workspaceId: activeWorkspaceId,
         visibility: activeWorkspace.kind === "shared" ? "shared" : "private",
@@ -146,7 +182,7 @@ export const QuickCapture = ({ open, onClose }: { open: boolean; onClose: () => 
             onKeyDown={(event) => {
               if (event.key === "Escape") onClose();
             }}
-            placeholder={mode === "find" ? "Find a person, company, note, content idea or source..." : "What's on your mind? Paste links here too."}
+            placeholder={mode === "find" ? "Find a person, company, content idea, decision or source..." : "What's on your mind? Paste links here too."}
             className="h-12 text-base"
           />
           {mode === "capture" ? (
@@ -230,7 +266,7 @@ export const QuickCapture = ({ open, onClose }: { open: boolean; onClose: () => 
                 </div>
                 <p className="mt-1 truncate text-xs text-muted">{object.summary}</p>
               </button>
-            )) : <p className="rounded-xl border border-dashed border-ink/10 p-4 text-sm text-muted">Search your people, companies, content ideas, field notes and sources.</p>}
+            )) : <p className="rounded-xl border border-dashed border-ink/10 p-4 text-sm text-muted">Search your people, companies, content ideas, decisions and sources.</p>}
           </div>
         ) : capturedCount > 0 ? (
           <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-forest">

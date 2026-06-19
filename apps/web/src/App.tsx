@@ -7,12 +7,12 @@ import { LandingPage } from "./pages/LandingPage";
 import { OnboardingPage } from "./pages/OnboardingPage";
 import { ReviewPage } from "./pages/ReviewPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { SignViewerPage } from "./pages/SignViewerPage";
 import { UniversalObjectPage } from "./pages/UniversalObjectPage";
 import { WeeklyReviewPage } from "./pages/WeeklyReviewPage";
 
 const TrainRoutes = lazy(() => import("@garden/module-train").then((module) => ({ default: module.TrainRoutes })));
-const ThinkRoutes = lazy(() => import("@garden/module-think").then((module) => ({ default: module.ThinkRoutes })));
-const WorkRoutes = lazy(() => import("@garden/module-work").then((module) => ({ default: module.WorkRoutes })));
+const ThinkRoutes = lazy(() => import("@garden/module-work").then((module) => ({ default: module.WorkRoutes })));
 const EatRoutes = lazy(() => import("@garden/module-eat").then((module) => ({ default: module.EatRoutes })));
 
 const LoadingModule = () => <p className="py-14 text-sm text-muted">Opening module...</p>;
@@ -27,17 +27,17 @@ const PrivateRoutes = () => {
   return (
     <Suspense fallback={<LoadingModule />}>
       <Routes>
-        <Route path="/today" element={<Navigate replace to="/work" />} />
+        <Route path="/today" element={<Navigate replace to="/think" />} />
         <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/train/*" element={<TrainRoutes />} />
         <Route path="/think/*" element={<ThinkRoutes />} />
-        <Route path="/work/*" element={<WorkRoutes />} />
+        <Route path="/work/*" element={<Navigate replace to="/think" />} />
         <Route path="/objects/:kind/:id" element={<UniversalObjectPage />} />
         <Route path="/eat/*" element={<EatRoutes />} />
         <Route path="/review" element={<ReviewPage />} />
         <Route path="/weekly-review" element={<WeeklyReviewPage />} />
         <Route path="/settings" element={<SettingsPage />} />
-        <Route path="*" element={<Navigate replace to="/work" />} />
+        <Route path="*" element={<Navigate replace to="/think" />} />
       </Routes>
     </Suspense>
   );
@@ -47,6 +47,7 @@ export const App = () => (
   <Routes>
     <Route path="/" element={<LandingPage />} />
     <Route path="/login" element={<LandingPage />} />
+    <Route path="/sign-viewer" element={<SignViewerPage />} />
     <Route
       path="*"
       element={

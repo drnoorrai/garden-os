@@ -56,7 +56,7 @@ const captureTypes = [
   {
     icon: FileText,
     label: "Notes",
-    example: "Field notes, reflections, decisions and mental models.",
+    example: "Captured notes, decisions and source context.",
   },
 ];
 
@@ -118,8 +118,8 @@ const LandingAuthPanel = () => {
       </div>
 
       {auth.enabled && auth.user ? (
-        <Link to="/work" className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-forest px-5 text-sm font-medium text-white transition hover:bg-ink">
-          Open Work
+        <Link to="/think" className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-forest px-5 text-sm font-medium text-white transition hover:bg-ink">
+          Open Think
           <ArrowRight className="ml-2" size={16} />
         </Link>
       ) : auth.enabled ? (
@@ -158,7 +158,7 @@ const LandingAuthPanel = () => {
           {error ? <p className="mt-5 rounded-2xl bg-clay/12 p-4 text-sm leading-6 text-clay">{error}</p> : null}
         </>
       ) : (
-        <Link to="/work" className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-forest px-5 text-sm font-medium text-white transition hover:bg-ink">
+        <Link to="/think" className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-forest px-5 text-sm font-medium text-white transition hover:bg-ink">
           Open local Garden
           <ArrowRight className="ml-2" size={16} />
         </Link>

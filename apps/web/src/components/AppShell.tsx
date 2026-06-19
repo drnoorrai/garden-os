@@ -1,15 +1,14 @@
 import { useAuth } from "@garden/auth";
 import { useGarden } from "@garden/shared-state";
 import { Button, cn } from "@garden/ui";
-import { BookOpen, Dumbbell, Leaf, LogOut, Plus, Settings, SquareCheckBig, UtensilsCrossed } from "lucide-react";
+import { BookOpen, Dumbbell, Leaf, LogOut, Plus, Settings, UtensilsCrossed } from "lucide-react";
 import { type PropsWithChildren, useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { QuickCapture } from "./QuickCapture";
 
 const primary = [
-  { to: "/work", label: "Work", icon: SquareCheckBig },
-  { to: "/train", label: "Train", icon: Dumbbell },
   { to: "/think", label: "Think", icon: BookOpen },
+  { to: "/train", label: "Train", icon: Dumbbell },
   { to: "/eat", label: "Eat", icon: UtensilsCrossed },
 ];
 
@@ -138,7 +137,7 @@ export const AppShell = ({ children }: PropsWithChildren) => {
         </div>
       </aside>
       <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-ink/5 bg-canvas/90 px-5 backdrop-blur lg:hidden">
-        <NavLink to="/work" className="flex items-center gap-2.5">
+        <NavLink to="/think" className="flex items-center gap-2.5">
           <Leaf className="text-forest" size={19} />
           <span>
             <span className="block font-serif text-xl leading-5 tracking-tight">Garden OS</span>

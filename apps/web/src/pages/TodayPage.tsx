@@ -225,19 +225,18 @@ export const TodayPage = () => {
             <div className="mt-6 border-t border-forest/10 pt-4 text-sm text-forest">{briefing.suggestedNextAction}</div>
           </Card>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+            <SupportCard title="Think" href="/think">
+              <p className="font-medium">{work.priority}</p>
+              <p className="mt-2 text-sm leading-6 text-muted">{think.prompt}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Pill tone="clay">{attentionCount} need attention</Pill>
+                <Pill tone="stone">{work.sprintLoad} inbox load</Pill>
+              </div>
+            </SupportCard>
             <SupportCard title="Train" href="/train">
               <p className="font-medium">{train.workout}</p>
               <p className="mt-2 text-sm text-muted">{train.weeklyHardSets} hard sets · {train.intensity} intensity</p>
               <p className="mt-3 text-sm leading-6 text-muted">{train.recovery}</p>
-            </SupportCard>
-            <SupportCard title="Think" href="/think">
-              <p className="text-sm leading-6 text-muted">{think.prompt}</p>
-              <p className="mt-3 text-sm font-medium">{think.insight}</p>
-            </SupportCard>
-            <SupportCard title="Work" href="/work">
-              <p className="font-medium">{work.priority}</p>
-              <p className="mt-2 text-sm text-muted">{work.blockers} blockers · {work.sprintLoad} sprint</p>
-              <Pill tone="clay">{attentionCount} need attention</Pill>
             </SupportCard>
             <SupportCard title="Eat" href="/eat">
               <p className="font-medium">{eat.proteinLogged} / {eat.proteinTarget}g protein</p>

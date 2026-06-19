@@ -36,7 +36,7 @@ export const WeeklyReviewPage = () => {
         <Card className="p-6 md:col-span-2">
           <SectionHeading title="Next week focus" />
           <p className="font-serif text-2xl tracking-tight">{latest?.tomorrowNote || data.profile.focusTheme}</p>
-          <Link to="/work" className="mt-7 inline-flex rounded-full bg-forest px-5 py-3 text-sm font-medium text-white">Return to Work</Link>
+          <Link to="/think" className="mt-7 inline-flex rounded-full bg-forest px-5 py-3 text-sm font-medium text-white">Return to Think</Link>
         </Card>
       </div>
     </>

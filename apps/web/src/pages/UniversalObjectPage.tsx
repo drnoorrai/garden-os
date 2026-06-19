@@ -58,7 +58,7 @@ export const UniversalObjectPage = () => {
   const [commentBody, setCommentBody] = useState("");
   const [commentAuthorId, setCommentAuthorId] = useState(currentMemberId);
 
-  if (!isObjectKind(kind) || !id) return <Navigate replace to="/work" />;
+  if (!isObjectKind(kind) || !id) return <Navigate replace to="/think" />;
 
   const ref: ObjectRef = { kind, id };
   const object = getObjectByRef(data, ref);
@@ -91,7 +91,7 @@ export const UniversalObjectPage = () => {
       <Card className="p-8">
         <Pill tone="stone">Missing object</Pill>
         <h1 className="mt-4 font-serif text-4xl tracking-tight">This object is not in your Garden.</h1>
-        <Button className="mt-6" variant="secondary" onClick={() => navigate("/work")}>Back to Work</Button>
+        <Button className="mt-6" variant="secondary" onClick={() => navigate("/think")}>Back to Think</Button>
       </Card>
     );
   }
@@ -270,9 +270,9 @@ export const UniversalObjectPage = () => {
 
   return (
     <div className="space-y-6">
-      <Link to="/work" className="inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-ink">
+      <Link to="/think" className="inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-ink">
         <ArrowLeft size={16} />
-        Back to Work
+        Back to Think
       </Link>
 
       <Card className="p-6 sm:p-8">
