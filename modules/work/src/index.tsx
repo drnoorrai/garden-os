@@ -3,7 +3,7 @@ import { DEFAULT_PRIVATE_WORKSPACE_ID, DEFAULT_SHARED_WORKSPACE_ID, SONUM_MEMBER
 import { captureUniversalItem, useGarden } from "@garden/shared-state";
 import type { ContentFormat, GardenMember, PartnerSharingLevel, RelationshipKind, RelationshipNoteKind, RelationshipRecord, RelationshipStage, TaskGardenItem, TaskGardenZone, TriageAction, WorkItem, WorkItemKind } from "@garden/types";
 import { Button, Card, cn, Input, Label, Pill, SectionHeading, Textarea } from "@garden/ui";
-import { ArrowRight, Building2, ExternalLink, GripVertical, MessageSquare, Plus, Trash2, UserRound } from "lucide-react";
+import { ArrowRight, Building2, Check, ExternalLink, GripVertical, MessageSquare, Plus, Trash2, UserRound } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link as RouterLink, Navigate, Route, Routes } from "react-router-dom";
 
@@ -683,16 +683,7 @@ const TaskGarden = () => {
       ),
     }));
 
-  const updateAssignment = (id: string, value: string) => {
-    const assigneeIds = assignmentIds(value);
-    updateItem(id, {
-      assigneeIds,
-      ownerId: assigneeIds.length === 1 ? assigneeIds[0] : undefined,
-      visibility: "shared",
-    });
-  };
-
-  const deleteItem = (id: string) =>
+  const completeItem = (id: string) =>
     update((current) => ({
       ...current,
       taskGardenItems: current.taskGardenItems.filter((item) => item.id !== id),
@@ -776,49 +767,27 @@ const TaskGarden = () => {
                       key={item.id}
                       draggable
                       onDragStart={() => setDragging(item.id)}
-                      className="rounded-2xl border border-ink/5 bg-mist/45 p-4"
+                      className="group rounded-2xl border border-ink/5 bg-mist/45 p-3 transition hover:border-sage/20 hover:bg-mist/65 sm:p-4"
                     >
-                      <div className="flex items-start gap-2">
-                        <GripVertical size={15} className="mt-1 shrink-0 text-muted" />
+                      <div className="flex items-start gap-2.5">
+                        <GripVertical size={15} className="mt-1 shrink-0 text-muted/70" />
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium leading-6">{item.title}</p>
+                          <div className="flex items-start justify-between gap-3">
+                            <p className="text-sm font-medium leading-6">{item.title}</p>
+                            <button
+                              aria-label={`Mark ${item.title} done`}
+                              className="inline-flex h-7 min-h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted/70 transition hover:bg-sage/15 hover:text-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage"
+                              onClick={() => completeItem(item.id)}
+                              title="Done"
+                              type="button"
+                            >
+                              <Check size={14} strokeWidth={2.2} />
+                            </button>
+                          </div>
                           <p className="mt-1 text-xs text-muted">
                             Assigned to {assignmentLabel(item)} · Added by {memberName(item.createdBy)}
                           </p>
                         </div>
-                      </div>
-                      <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-                        <select
-                          aria-label={`Assign ${item.title}`}
-                          value={memberIds.length > 0 && memberIds.every((memberId) => (item.assigneeIds ?? (item.ownerId ? [item.ownerId] : [])).includes(memberId))
-                            ? "both"
-                            : (item.assigneeIds ?? (item.ownerId ? [item.ownerId] : [])).length === 0
-                              ? "unassigned"
-                              : (item.assigneeIds ?? (item.ownerId ? [item.ownerId] : []))[0]}
-                          onChange={(event) => updateAssignment(item.id, event.target.value)}
-                          className="h-9 rounded-xl border border-ink/8 bg-white px-3 text-xs"
-                        >
-                          <option value="both">Both</option>
-                          <option value="unassigned">Unassigned</option>
-                          {members.map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}
-                        </select>
-                        <select
-                          aria-label={`Move ${item.title}`}
-                          value={item.zone}
-                          onChange={(event) => updateItem(item.id, { zone: event.target.value as TaskGardenZone })}
-                          className="h-9 rounded-xl border border-ink/8 bg-white px-3 text-xs"
-                        >
-                          {taskGardenZones.map((entry) => <option key={entry.id} value={entry.id}>{entry.label}</option>)}
-                        </select>
-                        <Button
-                          aria-label={`Delete ${item.title}`}
-                          className="h-9 min-h-9 px-3 text-xs"
-                          onClick={() => deleteItem(item.id)}
-                          type="button"
-                          variant="danger"
-                        >
-                          <Trash2 size={14} /> Done
-                        </Button>
                       </div>
                     </div>
                   );
