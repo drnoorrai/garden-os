@@ -31,22 +31,18 @@ const helperText: Record<CaptureKind, string> = {
 
 export const QuickCapture = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
   const navigate = useNavigate();
-  const { activeWorkspace, activeWorkspaceId, currentMemberId, data, update } = useGarden();
+  const { currentMemberId, data, update } = useGarden();
   const [draft, setDraft] = useState("");
   const [kind, setKind] = useState<CaptureKind>("thought");
   const [mode, setMode] = useState<"capture" | "find">("capture");
-  const [sendToTaskGarden, setSendToTaskGarden] = useState(activeWorkspace.kind === "shared");
+  const [sendToTaskGarden, setSendToTaskGarden] = useState(false);
   const [taskGardenZone, setTaskGardenZone] = useState<TaskGardenZone>("develop");
-  const [ownerId, setOwnerId] = useState("");
   const [capturedCount, setCapturedCount] = useState(0);
   const [capturedRef, setCapturedRef] = useState<ObjectRef | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const workspaceMembers = activeWorkspace.memberIds
-    .map((memberId) => data.members.find((member) => member.id === memberId))
-    .filter(Boolean);
   const objects = useMemo(
-    () => getUniversalObjects(data).filter((object) => (object.workspaceId ?? DEFAULT_PRIVATE_WORKSPACE_ID) === activeWorkspaceId),
-    [activeWorkspaceId, data],
+    () => getUniversalObjects(data).filter((object) => (object.workspaceId ?? DEFAULT_PRIVATE_WORKSPACE_ID) === DEFAULT_PRIVATE_WORKSPACE_ID),
+    [data],
   );
   const results = mode === "find" && draft.trim()
     ? objects.filter((object) =>
@@ -58,14 +54,13 @@ export const QuickCapture = ({ open, onClose }: { open: boolean; onClose: () => 
     if (open) {
       setCapturedCount(0);
       setCapturedRef(null);
-      setSendToTaskGarden(activeWorkspace.kind === "shared");
+      setSendToTaskGarden(false);
       setTaskGardenZone("develop");
-      setOwnerId("");
       const id = window.setTimeout(() => inputRef.current?.focus(), 50);
       return () => window.clearTimeout(id);
     }
     setDraft("");
-  }, [activeWorkspace.kind, open]);
+  }, [open]);
 
   if (!open) return null;
 
@@ -94,10 +89,11 @@ export const QuickCapture = ({ open, onClose }: { open: boolean; onClose: () => 
           taskGardenItems: [
             {
               id: createId(),
-              workspaceId: activeWorkspaceId,
+              workspaceId: DEFAULT_PRIVATE_WORKSPACE_ID,
+              visibility: "private" as const,
               zone: taskGardenZone,
               title: draft.trim(),
-              ownerId: ownerId || undefined,
+              assigneeIds: [],
               createdBy: currentMemberId,
               createdAt,
             },
@@ -106,12 +102,11 @@ export const QuickCapture = ({ open, onClose }: { open: boolean; onClose: () => 
         };
       }
       const result = captureUniversalItem(current, draft, kind, {
-        workspaceId: activeWorkspaceId,
-        visibility: activeWorkspace.kind === "shared" ? "shared" : "private",
+        workspaceId: DEFAULT_PRIVATE_WORKSPACE_ID,
+        visibility: "private",
         createdBy: currentMemberId,
         addToTaskGarden: sendToTaskGarden,
         taskGardenZone,
-        ownerId: ownerId || undefined,
       });
       nextRef = result.ref;
       return result.data;
@@ -158,7 +153,7 @@ export const QuickCapture = ({ open, onClose }: { open: boolean; onClose: () => 
               ))}
             </div>
             <p className="mt-2 text-xs text-muted">
-              {mode === "capture" ? "Capturing to" : "Searching"} <span className="font-medium text-ink">{activeWorkspace.name}</span>
+              {mode === "capture" ? "Capturing to" : "Searching"} <span className="font-medium text-ink">My Garden</span>
             </p>
           </div>
           <button aria-label="Close capture" onClick={onClose} className="text-muted transition hover:text-ink">
@@ -219,32 +214,20 @@ export const QuickCapture = ({ open, onClose }: { open: boolean; onClose: () => 
                 <span>
                   Send to Task Garden
                   <span className="mt-0.5 block text-xs leading-5 text-muted">
-                    Useful when this capture needs shaping with Sonum before it becomes work or content.
+                    Useful when this capture needs prioritizing before it becomes work or content.
                   </span>
                 </span>
               </label>
               {sendToTaskGarden ? (
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <div className="mt-3">
                   <select
                     value={taskGardenZone}
                     onChange={(event) => setTaskGardenZone(event.target.value as TaskGardenZone)}
-                    className="h-10 rounded-2xl border border-ink/8 bg-white px-3 text-sm text-ink outline-none"
+                    className="h-10 w-full rounded-2xl border border-ink/8 bg-white px-3 text-sm text-ink outline-none"
                   >
                     <option value="do-now">Do Now</option>
                     <option value="develop">Develop</option>
                     <option value="ask-delegate">Ask / Delegate</option>
-                  </select>
-                  <select
-                    value={ownerId}
-                    onChange={(event) => setOwnerId(event.target.value)}
-                    className="h-10 rounded-2xl border border-ink/8 bg-white px-3 text-sm text-ink outline-none"
-                  >
-                    <option value="">Owner: both</option>
-                    {workspaceMembers.map((member) => (
-                      <option key={member?.id} value={member?.id}>
-                        Owner: {member?.name}
-                      </option>
-                    ))}
                   </select>
                 </div>
               ) : null}

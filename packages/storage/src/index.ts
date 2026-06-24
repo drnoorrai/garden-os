@@ -136,16 +136,10 @@ const mergeSharedGardenPayload = (
   next.members = mergeById(asArray(existing.members), asArray(incoming.members));
   next.workspaces = mergeWorkspacesById(asArray(existing.workspaces), asArray(incoming.workspaces));
   for (const key of workspaceScopedKeys) {
-    (next as Record<string, unknown>)[key] = mergeById(
-      forWorkspace(asArray<WorkspaceRecord & IdRecord>(existing[key]), workspaceId),
-      forWorkspace(asArray<WorkspaceRecord & IdRecord>(incoming[key]), workspaceId),
-    );
+    (next as Record<string, unknown>)[key] = forWorkspace(asArray<WorkspaceRecord & IdRecord>(incoming[key]), workspaceId);
   }
   for (const key of relationScopedKeys) {
-    (next as Record<string, unknown>)[key] = mergeById(
-      forWorkspace(asArray<WorkspaceRecord & IdRecord>(existing[key]), workspaceId),
-      forWorkspace(asArray<WorkspaceRecord & IdRecord>(incoming[key]), workspaceId),
-    );
+    (next as Record<string, unknown>)[key] = forWorkspace(asArray<WorkspaceRecord & IdRecord>(incoming[key]), workspaceId);
   }
   return next;
 };

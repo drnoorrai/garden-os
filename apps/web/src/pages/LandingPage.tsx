@@ -11,7 +11,6 @@ import {
   LockKeyhole,
   Search,
   UserRound,
-  UsersRound,
   Video,
 } from "lucide-react";
 import { type FormEvent, useState } from "react";
@@ -64,7 +63,7 @@ const flow = [
   ["Capture", "Type a thought, paste a URL, name a person or save a source."],
   ["Route", "Garden OS turns it into the right object: task, note, person, company, source or content idea."],
   ["Develop", "Add notes, links, backlinks, comments, timestamped thoughts and next actions."],
-  ["Share", "Keep it private in My Garden or send it to a shared workspace like Noor + Sonum."],
+  ["Finish", "Move the next action into Task Garden and mark it done when it is handled."],
 ];
 
 const examples = [
@@ -72,7 +71,7 @@ const examples = [
   "Person: Maya, ask about the newsletter collaboration",
   "Company: Common Room Studio, save the pitch link",
   "Content: why quick capture beats a blank page",
-  "Task: send Sonum three hook options",
+  "Task: draft three hook options",
 ];
 
 const LandingAuthPanel = () => {
@@ -111,7 +110,7 @@ const LandingAuthPanel = () => {
           <Pill tone="sage">Sign in</Pill>
           <h2 className="mt-4 font-serif text-3xl tracking-[-0.045em]">Open your Garden.</h2>
           <p className="mt-2 text-sm leading-6 text-muted">
-            Your account starts clean. Your captures sync privately, and shared workspace items sync with invited partners.
+            Your account starts clean. Your captures sync privately across devices.
           </p>
         </div>
         <LockKeyhole className="mt-1 shrink-0 text-sage" size={20} strokeWidth={1.8} />
@@ -260,8 +259,8 @@ export const LandingPage = () => (
           ))}
         </div>
         <div className="mt-8 flex items-center gap-3 rounded-2xl bg-forest/8 p-4 text-sm leading-6 text-forest">
-          <UsersRound size={18} className="shrink-0" />
-          Shared workspaces let partners develop captures together without exposing private Gardens.
+          <LockKeyhole size={18} className="shrink-0" />
+          One private workspace keeps capture, search and tasks pointed at the same data after refresh.
         </div>
       </Card>
     </section>

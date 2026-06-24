@@ -920,12 +920,6 @@ export const createFreshData = (date = todayKey()): GardenData => {
         name: "You",
         avatarInitials: "Y",
       },
-      {
-        id: SONUM_MEMBER_ID,
-        name: "Sonum",
-        email: "so.samra@gmail.com",
-        avatarInitials: "S",
-      },
     ],
     workspaces: [
       {
@@ -933,12 +927,6 @@ export const createFreshData = (date = todayKey()): GardenData => {
         name: "My Garden",
         kind: "private",
         memberIds: ["new-user"],
-      },
-      {
-        id: DEFAULT_SHARED_WORKSPACE_ID,
-        name: "Noor + Sonum",
-        kind: "shared",
-        memberIds: ["new-user", SONUM_MEMBER_ID],
       },
     ],
     plans: [
@@ -966,7 +954,7 @@ export const createFreshData = (date = todayKey()): GardenData => {
     objectNextActions: [],
     taskGardenItems: [],
     objectComments: [],
-    partnerSharingSettings: defaultPartnerSharingSettings,
+    partnerSharingSettings: [],
     bets: [],
     kanbanCards: [],
     training: [],

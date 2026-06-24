@@ -1,7 +1,7 @@
 import { ModuleHeader, ModuleTabs } from "@garden/design-system";
-import { DEFAULT_PRIVATE_WORKSPACE_ID, DEFAULT_SHARED_WORKSPACE_ID, SONUM_MEMBER_ID, createId, objectPath, todayKey } from "@garden/domain";
+import { DEFAULT_PRIVATE_WORKSPACE_ID, createId, objectPath, todayKey } from "@garden/domain";
 import { captureUniversalItem, useGarden } from "@garden/shared-state";
-import type { ContentFormat, GardenMember, PartnerSharingLevel, RelationshipKind, RelationshipNoteKind, RelationshipRecord, RelationshipStage, TaskGardenItem, TaskGardenZone, TriageAction, WorkItem, WorkItemKind } from "@garden/types";
+import type { ContentFormat, RelationshipKind, RelationshipNoteKind, RelationshipRecord, RelationshipStage, TaskGardenItem, TaskGardenZone, TriageAction, WorkItem, WorkItemKind } from "@garden/types";
 import { Button, Card, cn, Input, Label, Pill, SectionHeading, Textarea } from "@garden/ui";
 import { ArrowRight, Building2, Check, ExternalLink, GripVertical, MessageSquare, Plus, Trash2, UserRound } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -13,7 +13,6 @@ const tabs = [
   { to: "/think/relationships", label: "Relationships" },
   { to: "/think/task-garden", label: "Task Garden" },
   { to: "/think/clarity", label: "Clarity" },
-  { to: "/think/settings", label: "Settings" },
 ];
 
 const belongsToWorkspace = (workspaceId: string, item: { workspaceId?: string }) =>
@@ -631,50 +630,18 @@ const RelationshipsStudio = () => {
 const taskGardenZones: Array<{ id: TaskGardenZone; label: string; guidance: string }> = [
   { id: "do-now", label: "Do Now", guidance: "Clear, important and ready for action." },
   { id: "develop", label: "Develop", guidance: "Needs shaping, context or a better angle." },
-  { id: "ask-delegate", label: "Ask / Delegate", guidance: "Needs Sonum, Noor or someone else to move it forward." },
+  { id: "ask-delegate", label: "Ask / Delegate", guidance: "Needs a reply, decision or outside action to move it forward." },
 ];
 
 const TaskGarden = () => {
   const { currentMemberId, data, update } = useGarden();
   const [title, setTitle] = useState("");
   const [zone, setZone] = useState<TaskGardenZone>("develop");
-  const [assignment, setAssignment] = useState("both");
-  const [filter, setFilter] = useState("all");
   const [dragging, setDragging] = useState<string | null>(null);
-  const coupleMemberIds = [...new Set([
-    data.profile.id,
-    SONUM_MEMBER_ID,
-    ...(data.workspaces.find((workspace) => workspace.id === DEFAULT_SHARED_WORKSPACE_ID)?.memberIds ?? []),
-  ])];
-  const members = coupleMemberIds
-    .map((memberId) => data.members.find((member) => member.id === memberId))
-    .filter((member): member is GardenMember => Boolean(member));
-  const memberIds = members.map((member) => member.id);
-  const sharedTaskItems = data.taskGardenItems.filter((item) =>
-    item.visibility === "shared" ||
-    item.workspaceId === DEFAULT_SHARED_WORKSPACE_ID ||
-    item.workspaceId === DEFAULT_PRIVATE_WORKSPACE_ID
+  const items = data.taskGardenItems.filter((item) =>
+    (item.workspaceId ?? DEFAULT_PRIVATE_WORKSPACE_ID) === DEFAULT_PRIVATE_WORKSPACE_ID &&
+    item.visibility !== "shared"
   );
-  const items = sharedTaskItems.filter((item) => {
-    const assigneeIds = item.assigneeIds ?? (item.ownerId ? [item.ownerId] : []);
-    if (filter === "all") return true;
-    if (filter === "unassigned") return assigneeIds.length === 0;
-    if (filter === "both") return memberIds.length > 0 && memberIds.every((memberId) => assigneeIds.includes(memberId));
-    return assigneeIds.includes(filter);
-  });
-
-  const memberName = (memberId?: string) => members.find((member) => member?.id === memberId)?.name ?? "Unknown";
-  const assignmentIds = (value: string) => {
-    if (value === "both") return memberIds;
-    if (value === "unassigned") return [];
-    return [value];
-  };
-  const assignmentLabel = (item: TaskGardenItem) => {
-    const assigneeIds = item.assigneeIds ?? (item.ownerId ? [item.ownerId] : []);
-    if (assigneeIds.length === 0) return "Unassigned";
-    if (memberIds.length > 0 && memberIds.every((memberId) => assigneeIds.includes(memberId))) return "Both";
-    return assigneeIds.map(memberName).join(", ");
-  };
   const updateItem = (id: string, change: Partial<TaskGardenItem>) =>
     update((current) => ({
       ...current,
@@ -693,26 +660,24 @@ const TaskGarden = () => {
     <div className="space-y-6">
       <Card className="p-6">
         <SectionHeading
-          title="Shared Task Garden"
-          supporting="One couple-visible board. Either of you can create, assign and move tasks without switching gardens."
+          title="Task Garden"
+          supporting="Capture, prioritize, move and finish tasks in one private board."
         />
         <form
-          className="grid gap-3 lg:grid-cols-[1fr_180px_190px_auto]"
+          className="grid gap-3 lg:grid-cols-[1fr_180px_auto]"
           onSubmit={(event) => {
             event.preventDefault();
             if (!title.trim()) return;
-            const assigneeIds = assignmentIds(assignment);
             update((current) => ({
               ...current,
               taskGardenItems: [
                 {
                   id: createId(),
                   workspaceId: DEFAULT_PRIVATE_WORKSPACE_ID,
-                  visibility: "shared",
+                  visibility: "private",
                   zone,
                   title: title.trim(),
-                  ownerId: assigneeIds.length === 1 ? assigneeIds[0] : undefined,
-                  assigneeIds,
+                  assigneeIds: [],
                   createdBy: currentMemberId,
                   createdAt: new Date().toISOString(),
                 },
@@ -726,20 +691,8 @@ const TaskGarden = () => {
           <select aria-label="Task zone" value={zone} onChange={(event) => setZone(event.target.value as TaskGardenZone)} className="h-11 rounded-xl border border-ink/8 bg-white px-3 text-sm">
             {taskGardenZones.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
           </select>
-          <select aria-label="Task assignee" value={assignment} onChange={(event) => setAssignment(event.target.value)} className="h-11 rounded-xl border border-ink/8 bg-white px-3 text-sm">
-            <option value="both">Assign: both</option>
-            <option value="unassigned">Assign: unassigned</option>
-            {members.map((member) => <option key={member.id} value={member.id}>Assign: {member.name}</option>)}
-          </select>
           <Button type="submit"><Plus size={15} /> Add</Button>
         </form>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" onClick={() => setFilter("all")} className={cn("rounded-full px-3 py-1.5 text-xs font-medium", filter === "all" ? "bg-forest text-white" : "bg-mist text-muted hover:bg-sage/15 hover:text-forest")}>All</button>
-          <button type="button" onClick={() => setFilter(data.profile.id)} className={cn("rounded-full px-3 py-1.5 text-xs font-medium", filter === data.profile.id ? "bg-forest text-white" : "bg-mist text-muted hover:bg-sage/15 hover:text-forest")}>Mine</button>
-          <button type="button" onClick={() => setFilter(SONUM_MEMBER_ID)} className={cn("rounded-full px-3 py-1.5 text-xs font-medium", filter === SONUM_MEMBER_ID ? "bg-forest text-white" : "bg-mist text-muted hover:bg-sage/15 hover:text-forest")}>Sonum</button>
-          <button type="button" onClick={() => setFilter("both")} className={cn("rounded-full px-3 py-1.5 text-xs font-medium", filter === "both" ? "bg-forest text-white" : "bg-mist text-muted hover:bg-sage/15 hover:text-forest")}>Both</button>
-          <button type="button" onClick={() => setFilter("unassigned")} className={cn("rounded-full px-3 py-1.5 text-xs font-medium", filter === "unassigned" ? "bg-forest text-white" : "bg-mist text-muted hover:bg-sage/15 hover:text-forest")}>Unassigned</button>
-        </div>
       </Card>
 
       <div className="grid gap-4 xl:grid-cols-3">
@@ -774,19 +727,18 @@ const TaskGarden = () => {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start justify-between gap-3">
                             <p className="text-sm font-medium leading-6">{item.title}</p>
-                            <button
+                            <Button
                               aria-label={`Mark ${item.title} done`}
-                              className="inline-flex h-7 min-h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted/70 transition hover:bg-sage/15 hover:text-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage"
+                              className="h-8 min-h-8 shrink-0 gap-1.5 px-3 text-xs"
                               onClick={() => completeItem(item.id)}
                               title="Done"
                               type="button"
+                              variant="secondary"
                             >
                               <Check size={14} strokeWidth={2.2} />
-                            </button>
+                              Done
+                            </Button>
                           </div>
-                          <p className="mt-1 text-xs text-muted">
-                            Assigned to {assignmentLabel(item)} · Added by {memberName(item.createdBy)}
-                          </p>
                         </div>
                       </div>
                     </div>
@@ -805,44 +757,4 @@ const TaskGarden = () => {
   );
 };
 
-const ThinkSettings = () => {
-  const { data, update } = useGarden();
-  return (
-    <div className="space-y-6">
-      <Card className="p-6">
-        <SectionHeading
-          title="Couple Sharing"
-          supporting="Choose what can appear in a partner's Garden. Task Garden is shared by default; more private surfaces can stay summary-only or private."
-        />
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {data.partnerSharingSettings.map((setting) => (
-            <div key={setting.id} className="rounded-2xl bg-mist/45 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-medium">{setting.label}</p>
-                  <p className="mt-2 text-sm leading-6 text-muted">{setting.description}</p>
-                </div>
-                <Pill tone={setting.level === "shared" ? "sage" : setting.level === "summary" ? "stone" : "clay"}>{setting.level}</Pill>
-              </div>
-              <select
-                aria-label={`${setting.label} sharing level`}
-                value={setting.level}
-                onChange={(event) => update((current) => ({
-                  ...current,
-                  partnerSharingSettings: current.partnerSharingSettings.map((item) =>
-                    item.id === setting.id ? { ...item, level: event.target.value as PartnerSharingLevel } : item,
-                  ),
-                }))}
-                className="mt-4 h-10 w-full rounded-xl border border-ink/8 bg-white px-3 text-sm"
-              >
-                <option value="private">Private</option>
-                <option value="summary">Summary only</option>
-                <option value="shared">Shared</option>
-              </select>
-            </div>
-          ))}
-        </div>
-      </Card>
-    </div>
-  );
-};
+const ThinkSettings = () => <Navigate replace to="/think" />;

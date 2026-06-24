@@ -13,7 +13,7 @@ import {
   urlAtTimestamp,
 } from "@garden/domain";
 import { createContentIdeaFromSourceNote, useGarden } from "@garden/shared-state";
-import type { ObjectNoteKind, ObjectRef, ObjectRelationLabel, ObjectVisibility, SourceRecord, SourceType, UniversalObjectKind } from "@garden/types";
+import type { ObjectNoteKind, ObjectRef, ObjectRelationLabel, SourceRecord, SourceType, UniversalObjectKind } from "@garden/types";
 import { Button, Card, cn, Input, Label, Pill, SectionHeading, Textarea } from "@garden/ui";
 import { ArrowLeft, ExternalLink, Link as LinkIcon, Plus } from "lucide-react";
 import { useState } from "react";
@@ -63,8 +63,7 @@ export const UniversalObjectPage = () => {
   const ref: ObjectRef = { kind, id };
   const object = getObjectByRef(data, ref);
   const objectWorkspaceId = object?.workspaceId ?? DEFAULT_PRIVATE_WORKSPACE_ID;
-  const objectWorkspace = data.workspaces.find((workspace) => workspace.id === objectWorkspaceId) ?? data.workspaces[0];
-  const objectVisibility: ObjectVisibility = object?.visibility ?? (objectWorkspace?.kind === "shared" ? "shared" : "private");
+  const objectVisibility = object?.visibility ?? "private";
   const notes = getObjectNotes(data, ref);
   const related = getRelatedObjects(data, ref);
   const backlinks = getBacklinks(data, ref);
@@ -123,20 +122,6 @@ export const UniversalObjectPage = () => {
       return { ...current, fieldNotes: current.fieldNotes.map((item) => item.id === ref.id ? { ...item, body: summary } : item) };
     }
     return { ...current, sources: current.sources.map((item) => item.id === ref.id ? { ...item, summary } : item) };
-  });
-
-  const updateObjectMeta = (change: { workspaceId?: string; visibility?: ObjectVisibility }) => update((current) => {
-    const meta = { ...change, updatedBy: currentMemberId };
-    if (ref.kind === "person" || ref.kind === "company") {
-      return { ...current, relationships: current.relationships.map((item) => item.id === ref.id ? { ...item, ...meta } : item) };
-    }
-    if (ref.kind === "content") {
-      return { ...current, workItems: current.workItems.map((item) => item.id === ref.id ? { ...item, ...meta } : item) };
-    }
-    if (ref.kind === "note") {
-      return { ...current, fieldNotes: current.fieldNotes.map((item) => item.id === ref.id ? { ...item, ...meta } : item) };
-    }
-    return { ...current, sources: current.sources.map((item) => item.id === ref.id ? { ...item, ...meta } : item) };
   });
 
   const updateSource = (change: Partial<SourceRecord>) => update((current) => ({
@@ -296,28 +281,6 @@ export const UniversalObjectPage = () => {
             <p>Created {new Date(object.createdAt).toLocaleDateString()}</p>
             {object.createdBy ? <p className="mt-2">By {memberName(object.createdBy)}</p> : null}
             {object.metadata ? <p className="mt-2">Status: {object.metadata}</p> : null}
-            <Label className="mt-4" htmlFor="object-workspace">Workspace</Label>
-            <select
-              id="object-workspace"
-              value={objectWorkspaceId}
-              onChange={(event) => updateObjectMeta({
-                workspaceId: event.target.value,
-                visibility: data.workspaces.find((workspace) => workspace.id === event.target.value)?.kind === "shared" ? "shared" : "private",
-              })}
-              className="h-10 w-full rounded-xl border border-ink/8 bg-white px-3 text-sm text-ink"
-            >
-              {data.workspaces.map((workspace) => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}
-            </select>
-            <Label className="mt-4" htmlFor="object-visibility">Visibility</Label>
-            <select
-              id="object-visibility"
-              value={objectVisibility}
-              onChange={(event) => updateObjectMeta({ visibility: event.target.value as ObjectVisibility })}
-              className="h-10 w-full rounded-xl border border-ink/8 bg-white px-3 text-sm text-ink"
-            >
-              <option value="private">private</option>
-              <option value="shared">shared</option>
-            </select>
             {source ? (
               <>
                 <Label className="mt-4" htmlFor="source-type">Source type</Label>

@@ -8,7 +8,6 @@ import {
   createSeedData,
   createSourceFromUrl,
   defaultNutritionState,
-  defaultPartnerSharingSettings,
   getPlan,
   nextDayKey,
   todayKey,
@@ -27,7 +26,6 @@ import type {
 import { createContext, type PropsWithChildren, useContext, useEffect, useMemo, useState } from "react";
 
 const DEFAULT_STORAGE_KEY = "garden-os:v1:fresh";
-const SONUM_EMAIL = "so.samra@gmail.com";
 const LEGACY_MEMBER_IDS = new Set([DEFAULT_MEMBER_ID, "new-user", SONUM_MEMBER_ID]);
 const LEGACY_TRAIN_TEMPLATE_IDS = new Set(["full-body", "pull-focus"]);
 
@@ -58,7 +56,7 @@ const initialsForName = (name: string) => {
   return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
 };
 
-const ensureCollaborationDefaults = (data: GardenData): GardenData => {
+const ensurePersonalWorkspaceDefaults = (data: GardenData): GardenData => {
   const primaryMemberId = data.profile.id || "new-user";
   const existingMembers = data.members.length ? data.members : [];
   const primaryMember = existingMembers.find((member) => member.id === primaryMemberId) ?? {
@@ -66,66 +64,32 @@ const ensureCollaborationDefaults = (data: GardenData): GardenData => {
     name: data.profile.name || "You",
     avatarInitials: initialsForName(data.profile.name || "You"),
   };
-  const realSonumMember = existingMembers.find((member) => member.email?.toLowerCase() === SONUM_EMAIL);
-  const fallbackSonumMember = existingMembers.find((member) =>
-    member.id === SONUM_MEMBER_ID || member.name.trim().toLowerCase() === "sonum"
-  );
-  const sonumMember = realSonumMember ?? fallbackSonumMember ?? {
-    id: SONUM_MEMBER_ID,
-    name: "Sonum",
-    email: SONUM_EMAIL,
-    avatarInitials: "S",
-  };
   const legacyMemberIdsToDrop = new Set<string>();
   for (const memberId of LEGACY_MEMBER_IDS) {
-    if (memberId !== primaryMember.id && memberId !== sonumMember.id) legacyMemberIdsToDrop.add(memberId);
+    if (memberId !== primaryMember.id) legacyMemberIdsToDrop.add(memberId);
   }
   const normalizeMemberId = (memberId?: string) => {
     if (!memberId) return memberId;
-    if (memberId === SONUM_MEMBER_ID && sonumMember.id !== SONUM_MEMBER_ID) return sonumMember.id;
     if (legacyMemberIdsToDrop.has(memberId)) return primaryMemberId;
     return memberId;
   };
-  const normalizeMemberIds = (memberIds?: string[]) =>
-    [...new Set((memberIds ?? []).map(normalizeMemberId).filter((memberId): memberId is string => Boolean(memberId)))];
-  const otherMembers = existingMembers.filter((member) =>
-    member.id !== primaryMember.id &&
-    member.id !== sonumMember.id &&
-    !legacyMemberIdsToDrop.has(member.id)
-  );
-  const members = sonumMember.id === primaryMember.id
-    ? [primaryMember, ...otherMembers]
-    : [primaryMember, sonumMember, ...otherMembers];
   const privateWorkspace = data.workspaces.find((workspace) => workspace.id === DEFAULT_PRIVATE_WORKSPACE_ID) ?? {
     id: DEFAULT_PRIVATE_WORKSPACE_ID,
     name: "My Garden",
     kind: "private" as const,
     memberIds: [primaryMemberId],
   };
-  const sharedWorkspace = data.workspaces.find((workspace) => workspace.id === DEFAULT_SHARED_WORKSPACE_ID) ?? {
-    id: DEFAULT_SHARED_WORKSPACE_ID,
-    name: "Noor + Sonum",
-    kind: "shared" as const,
-    memberIds: [primaryMemberId, SONUM_MEMBER_ID],
-  };
-  const otherWorkspaces = data.workspaces.filter((workspace) => workspace.id !== privateWorkspace.id && workspace.id !== sharedWorkspace.id);
-  const sharedMemberIds = [...new Set([primaryMemberId, sonumMember.id, ...sharedWorkspace.memberIds])]
-    .filter((memberId) => !legacyMemberIdsToDrop.has(memberId));
-  const workspaces = [
-    { ...privateWorkspace, memberIds: [primaryMemberId] },
-    { ...sharedWorkspace, memberIds: sharedMemberIds },
-    ...otherWorkspaces,
-  ];
+  const workspaces = [{ ...privateWorkspace, id: DEFAULT_PRIVATE_WORKSPACE_ID, kind: "private" as const, memberIds: [primaryMemberId] }];
   const withObjectMeta = <T extends { workspaceId?: string; visibility?: ObjectVisibility; createdBy?: string }>(items: T[]) =>
     items.map((item) => ({
       ...item,
-      workspaceId: item.workspaceId ?? DEFAULT_PRIVATE_WORKSPACE_ID,
-      visibility: item.visibility ?? "private",
+      workspaceId: DEFAULT_PRIVATE_WORKSPACE_ID,
+      visibility: "private" as const,
       createdBy: normalizeMemberId(item.createdBy) ?? primaryMemberId,
     }));
   return {
     ...data,
-    members,
+    members: [{ ...primaryMember, id: primaryMemberId }],
     workspaces,
     fieldNotes: withObjectMeta(data.fieldNotes),
     workItems: withObjectMeta(data.workItems),
@@ -137,18 +101,28 @@ const ensureCollaborationDefaults = (data: GardenData): GardenData => {
     objectNextActions: withObjectMeta(data.objectNextActions),
     objectRelations: data.objectRelations.map((relation) => ({
       ...relation,
-      workspaceId: relation.workspaceId ?? DEFAULT_PRIVATE_WORKSPACE_ID,
+      workspaceId: DEFAULT_PRIVATE_WORKSPACE_ID,
     })),
-    taskGardenItems: data.taskGardenItems.map((item) => ({
-      ...item,
-      ownerId: normalizeMemberId(item.ownerId),
-      assigneeIds: normalizeMemberIds(item.assigneeIds),
-      createdBy: normalizeMemberId(item.createdBy) ?? primaryMemberId,
-    })),
+    taskGardenItems: data.taskGardenItems
+      .filter((item) =>
+        (item.workspaceId ?? DEFAULT_PRIVATE_WORKSPACE_ID) !== DEFAULT_SHARED_WORKSPACE_ID &&
+        item.visibility !== "shared"
+      )
+      .map((item) => ({
+        ...item,
+        workspaceId: DEFAULT_PRIVATE_WORKSPACE_ID,
+        visibility: "private" as const,
+        ownerId: undefined,
+        assigneeIds: [],
+        createdBy: normalizeMemberId(item.createdBy) ?? primaryMemberId,
+      })),
     objectComments: data.objectComments.map((comment) => ({
       ...comment,
+      workspaceId: DEFAULT_PRIVATE_WORKSPACE_ID,
+      visibility: "private" as const,
       authorId: normalizeMemberId(comment.authorId) ?? primaryMemberId,
     })),
+    partnerSharingSettings: [],
   };
 };
 
@@ -229,7 +203,7 @@ const migrateNutritionDefaults = (
 export const migrateGardenData = (stored: Partial<GardenData> | null, date = todayKey()): GardenData => {
   const seed = createFreshData(date);
   if (!stored) return seed;
-  return ensureCollaborationDefaults({
+  return ensurePersonalWorkspaceDefaults({
     ...seed,
     ...stored,
     profile: { ...seed.profile, ...stored.profile },
@@ -246,11 +220,11 @@ export const migrateGardenData = (stored: Partial<GardenData> | null, date = tod
     objectNextActions: stored.objectNextActions ?? seed.objectNextActions,
     taskGardenItems: (stored.taskGardenItems ?? seed.taskGardenItems).map((item) => ({
       ...item,
-      visibility: item.visibility ?? "shared",
+      visibility: item.visibility ?? "private",
       assigneeIds: item.assigneeIds ?? (item.ownerId ? [item.ownerId] : []),
     })),
     objectComments: stored.objectComments ?? seed.objectComments,
-    partnerSharingSettings: mergeWithExistingOverrides(defaultPartnerSharingSettings, stored.partnerSharingSettings ?? seed.partnerSharingSettings ?? []),
+    partnerSharingSettings: [],
     meals: stored.meals ?? seed.meals,
     mealPlans: stored.mealPlans ?? seed.mealPlans,
     groceries: stored.groceries ?? seed.groceries,
@@ -319,6 +293,7 @@ const withTaskGardenItem = (
 ): GardenData => {
   if (!options.addToTaskGarden) return data;
   const workspaceId = workspaceIdForData(data, options.workspaceId);
+  const visibility = visibilityForWorkspace(data, workspaceId, options.visibility);
   return {
     ...data,
     taskGardenItems: [
@@ -326,7 +301,7 @@ const withTaskGardenItem = (
         id: createId(),
         objectRef: ref,
         workspaceId,
-        visibility: "shared" as const,
+        visibility,
         zone: options.taskGardenZone ?? "develop",
         title,
         ownerId: options.ownerId,

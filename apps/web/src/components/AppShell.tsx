@@ -15,15 +15,8 @@ const primary = [
 export const AppShell = ({ children }: PropsWithChildren) => {
   const navigate = useNavigate();
   const auth = useAuth();
-  const { activeWorkspace, activeWorkspaceId, data, setActiveWorkspaceId, syncError, syncStatus } = useGarden();
+  const { syncError, syncStatus } = useGarden();
   const accountLabel = auth.user?.email ?? (auth.enabled ? "Signed in" : "Local mode");
-  const activeMembersById = new Map(activeWorkspace.memberIds
-    .map((memberId) => data.members.find((member) => member.id === memberId))
-    .filter((member): member is NonNullable<typeof member> => Boolean(member))
-    .map((member) => [member.id, member]));
-  const activeMembers = [...activeMembersById.values()];
-  const partnerNames = activeMembers.map((member) => member?.name).join(" + ");
-  const partnerEmails = [...new Set(activeMembers.map((member) => member?.email).filter(Boolean))].join(", ");
   const syncLabel = auth.enabled && auth.user
     ? syncStatus === "synced"
       ? "Synced across devices"
@@ -89,33 +82,6 @@ export const AppShell = ({ children }: PropsWithChildren) => {
             ⌘K
           </kbd>
         </button>
-        <section className="mt-5 rounded-[1.35rem] border border-ink/6 bg-white/70 p-3 shadow-card">
-          <label htmlFor="workspace-switcher" className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-            Workspace
-          </label>
-          <select
-            id="workspace-switcher"
-            value={activeWorkspaceId}
-            onChange={(event) => setActiveWorkspaceId(event.target.value)}
-            className="mt-2 h-10 w-full rounded-2xl border border-ink/10 bg-mist px-3 text-sm font-medium text-ink outline-none"
-          >
-            {data.workspaces.map((workspace) => (
-              <option key={workspace.id} value={workspace.id}>
-                {workspace.name}
-              </option>
-            ))}
-          </select>
-          <p className="mt-2 text-xs leading-5 text-muted">
-            {activeWorkspace.kind === "shared"
-              ? `Shared with ${partnerNames}.`
-              : "Private captures stay in your Garden."}
-          </p>
-          {activeWorkspace.kind === "shared" ? (
-            <p className="mt-3 rounded-2xl bg-forest/8 px-3 py-2 text-xs font-medium leading-5 text-forest">
-              Shared sync is active{partnerEmails ? ` for ${partnerEmails}` : ""}.
-            </p>
-          ) : null}
-        </section>
         <div className="mt-auto space-y-3">
           <div className="rounded-2xl bg-white/70 p-3 text-xs text-muted">
             <p className="font-medium text-ink">{accountLabel}</p>
@@ -141,22 +107,10 @@ export const AppShell = ({ children }: PropsWithChildren) => {
           <Leaf className="text-forest" size={19} />
           <span>
             <span className="block font-serif text-xl leading-5 tracking-tight">Garden OS</span>
-            <span className="text-[11px] text-muted">{activeWorkspace.name}</span>
+            <span className="text-[11px] text-muted">My Garden</span>
           </span>
         </NavLink>
         <div className="flex items-center gap-2">
-          <select
-            aria-label="Workspace"
-            value={activeWorkspaceId}
-            onChange={(event) => setActiveWorkspaceId(event.target.value)}
-            className="h-9 rounded-2xl border border-ink/8 bg-white/80 px-3 text-xs font-medium text-ink outline-none"
-          >
-            {data.workspaces.map((workspace) => (
-              <option key={workspace.id} value={workspace.id}>
-                {workspace.name}
-              </option>
-            ))}
-          </select>
           <Button variant="secondary" className="h-9 min-h-9 px-3" onClick={() => navigate("/review")}>
             Review
           </Button>

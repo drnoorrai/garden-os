@@ -1,6 +1,6 @@
 import { Button, Card, cn, Input, Label, Pill, Textarea } from "@garden/ui";
 import { useGarden } from "@garden/shared-state";
-import { ArrowRight, FileText, Leaf, Search, SquareCheckBig, UsersRound } from "lucide-react";
+import { ArrowRight, FileText, Leaf, Search, SquareCheckBig } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -14,16 +14,16 @@ const chapters = [
     body: "Garden OS turns raw captures into pages with summaries, notes, links, related objects, comments and next actions.",
   },
   {
-    title: "Choose private or shared",
-    body: "Keep personal material in My Garden, or shape ideas with someone trusted inside a shared Garden.",
+    title: "Keep one private workspace",
+    body: "Keep captures in My Garden so refreshes, search and task flow all point at the same place.",
   },
 ];
 
 const tools = [
   { icon: Search, title: "Quick Capture", text: "Press Cmd/Ctrl + K to capture or find anything." },
   { icon: FileText, title: "Object Pages", text: "Every person, company, note, source and content idea gets a home." },
-  { icon: UsersRound, title: "Shared Garden", text: "Choose when a capture belongs with a partner or collaborator." },
-  { icon: SquareCheckBig, title: "Task Garden", text: "Prioritize shared captures into Do Now, Develop or Ask / Delegate." },
+  { icon: Leaf, title: "Private Garden", text: "Everything lands in one personal workspace that stays consistent after refresh." },
+  { icon: SquareCheckBig, title: "Task Garden", text: "Prioritize captures into Do Now, Develop or Ask / Delegate." },
 ];
 
 export const OnboardingPage = () => {
